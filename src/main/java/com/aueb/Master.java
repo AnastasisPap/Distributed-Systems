@@ -33,6 +33,7 @@ public class Master {
                 try {
                     DataInputStream in = new DataInputStream(socket.getInputStream());
                     String input = in.readUTF();
+                    System.out.println("Received: " + input);
                     if (input.startsWith("WORKER")) {
                         workers.add(socket);
                         System.out.println("Worker added to pool");
@@ -45,21 +46,32 @@ public class Master {
         }
     }
 
-    private void dispatchTask(String taskInput) {
-        System.out.println("Task: " + taskInput);
-        int workerIdx = 0;
-        try {
-            String id = ((JSONObject) ((JSONObject) parser.parse(taskInput))).get("id").toString();
-            workerIdx = id.hashCode() % workers.size();
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
-        Socket selectedWorker = workers.get(workerIdx);
+    private void dispatchTask(String taskInput) throws IOException {
+        if (showRooms(taskInput)) {
+            DataOutputStream out;
+            for (Socket workerSocket : workers) {
+                if (workerSocket.isClosed()) continue;
+                out = new DataOutputStream(workerSocket.getOutputStream());
+                out.writeUTF(taskInput);
+            }
+        } else {
+            System.out.println("Task: " + taskInput);
+            int workerIdx = 0;
+            try {
+                String id = ((JSONObject) ((JSONObject) parser.parse(taskInput))).get("id").toString();
+                workerIdx = id.hashCode() % workers.size();
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+            Socket selectedWorker = workers.get(workerIdx);
 
-        try {
             DataOutputStream out = new DataOutputStream(selectedWorker.getOutputStream());
             out.writeUTF(taskInput);
-        } catch (IOException e) { e.printStackTrace(); }
+        }
+    }
+
+    private boolean showRooms(String task) {
+        return task.contains("show_rooms");
     }
 
     public static void main(String[] args) {

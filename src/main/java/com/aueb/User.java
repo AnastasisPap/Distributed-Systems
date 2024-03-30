@@ -39,7 +39,13 @@ public class User {
             DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
             if (selection == 1) addRoom(out);
             else if (selection == 2) addAvailability(out);
+            else if (selection == 3) showRooms(out);
         } catch (IOException e) { e.printStackTrace(); }
+    }
+
+    private void showRooms(DataOutputStream out) throws IOException {
+        JSONObject json_obj = Utils.createJSONObject("show_rooms");
+        out.writeUTF(json_obj.toJSONString());
     }
 
     private void addRoom(DataOutputStream out) throws IOException {

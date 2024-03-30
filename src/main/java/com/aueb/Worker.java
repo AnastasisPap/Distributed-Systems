@@ -8,6 +8,7 @@ import org.json.simple.parser.ParseException;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -45,6 +46,7 @@ public class Worker {
             System.out.println("Function: " + json_obj.get("function"));
             if (json_obj.get("function").toString().startsWith("add_room")) handleRoom((JSONObject) json_obj.get("room"));
             else if (json_obj.get("function").toString().startsWith("add_availability")) handleAvailability(json_obj);
+            else if (json_obj.get("function").toString().startsWith("show_rooms")) showRooms();
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
@@ -71,6 +73,19 @@ public class Worker {
         Room room = new Room(json_obj);
         rooms.add(room);
         System.out.println("Successfully stored room " + json_obj.get("id"));
+    }
+
+    public void showRooms() {
+        for (Room room : rooms) {
+            System.out.println("----------------------------------------------");
+            System.out.println("Room " + room.room_name + " (ID: " + room.id + ") located at " + room.area +
+                    " can house " + room.num_of_people + " and has a rating of " + room.rating + ". Available dates:");
+            for (int epoch : room.available_days) {
+                LocalDate date = LocalDate.ofEpochDay(epoch);
+                System.out.print(date + ", ");
+            }
+            System.out.println();
+        }
     }
 
     public void connectToMaster() throws IOException {
