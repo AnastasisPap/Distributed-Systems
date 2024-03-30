@@ -45,7 +45,7 @@ public class Worker {
                 try {
                     storeRoom(json_obj);
                     System.out.println("Storing room " + json_obj.get("roomName").toString() + "...");
-                    Thread.sleep(20000);
+                    Thread.sleep(20000); // Remove (included this for testing purposes)
                     System.out.println("Successfully stored room " + json_obj.get("roomName"));
                 } catch (IOException | ParseException | InterruptedException e) { e.printStackTrace(); }
             }
