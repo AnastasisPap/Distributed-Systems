@@ -1,23 +1,42 @@
 package com.aueb;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
 public class Room implements Serializable {
-    private final String room_name;
-    private final String area;
-    private final int num_of_people;
-    private final float price;
-    private final int total_rating;
-    private final int rating_count;
-    private final int id;
+    public final String room_name;
+    public final String area;
+    public final int num_of_people;
+    public final float price;
+    public final float rating;
+    public final int rating_count;
+    public final int id;
+    public Set<Integer> available_days = new HashSet<>();
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/MM/yyyy");
-    private Set<Integer> available_days = new HashSet<>();
+
+    public Room(JSONObject json_obj)
+    {
+        this.room_name = json_obj.get("room_name").toString();
+        this.num_of_people = Integer.parseInt(json_obj.get("num_of_people").toString());
+        this.area = json_obj.get("area").toString();
+        this.rating = Float.parseFloat(json_obj.get("review").toString());
+        this.price = Float.parseFloat(json_obj.get("price").toString());
+        this.rating_count = Integer.parseInt(json_obj.get("num_of_reviews").toString());
+        this.id = Integer.parseInt(json_obj.get("id").toString());
+        JSONArray dates = (JSONArray) json_obj.get("available_dates");
+
+        for (Object date_obj : dates) {
+            JSONObject date = (JSONObject) date_obj;
+            available_days.add(Integer.parseInt(date.toString()));
+        }
+    }
 
     public Room(String input)
     {
@@ -27,7 +46,7 @@ public class Room implements Serializable {
         this.num_of_people = Integer.parseInt(items[2].trim());
         this.price = Float.parseFloat(items[3].trim());
         this.id = Integer.parseInt(items[4].trim());
-        this.total_rating = 0;
+        this.rating = 0.0f;
         this.rating_count = 0;
     }
 
@@ -38,7 +57,7 @@ public class Room implements Serializable {
         this.available_days = convertToEpochs(dates);
         this.num_of_people = num_of_people;
         this.price = price;
-        this.total_rating = 0;
+        this.rating = 0;
         this.rating_count = 0;
         this.id = id;
     }
@@ -66,17 +85,17 @@ public class Room implements Serializable {
         this.available_days.remove(((int) date.toEpochDay()));
     }
 
-    public float getAverageRating() { return rating_count == 0 ? 0 : (float) total_rating / rating_count; }
-
     public JSONObject getJSON() {
         JSONObject res = new JSONObject();
-        res.put("roomName", this.room_name);
+        res.put("room_name", this.room_name);
         res.put("area", this.area);
-        res.put("numOfPeople", this.num_of_people);
+        res.put("num_of_people", this.num_of_people);
         res.put("price", this.price);
-        res.put("totalRating", this.total_rating);
-        res.put("numOfRatings", this.rating_count);
+        res.put("review", this.rating);
+        res.put("num_of_reviews", this.rating_count);
         res.put("id", this.id);
+        ArrayList<Integer> days = new ArrayList<>(available_days);
+        res.put("available_dates", days);
 
         return res;
     }

@@ -45,11 +45,12 @@ public class User {
     private void addRoom(DataOutputStream out) throws IOException {
         in.nextLine();
         while (true) {
-            System.out.println("Enter room name, area, number of people, and price (separated by \",\" in the same order)");
+            System.out.println("Enter room name, area, number of people, price, and id (separated by \",\" in the same order)");
             String room_str = in.nextLine();
             Room room = new Room(room_str);
             JSONObject json_obj = Utils.createJSONObject("add_room");
             json_obj.put("room", room.getJSON());
+            json_obj.put("id", room.id);
             out.writeUTF(json_obj.toJSONString());
         }
     }
@@ -79,8 +80,7 @@ public class User {
 
         JSONObject json_obj = Utils.createJSONObject("add_availability");
         json_obj.put("dates", dates_epochs);
-        json_obj.put("room_id", id);
-        System.out.println(json_obj);
+        json_obj.put("id", id);
         out.writeUTF(json_obj.toJSONString());
     }
 
