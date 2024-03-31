@@ -7,7 +7,6 @@ import org.json.simple.parser.ParseException;
 
 import java.io.*;
 import java.net.Socket;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,13 +54,10 @@ public class Worker {
         System.out.println(json_obj);
         int id = Integer.parseInt(json_obj.get("id").toString());
         System.out.println("[INFO] Searching " + rooms.size() + " room(s) for room with ID: " + id);
-        JSONArray dates_array = (JSONArray) json_obj.get("dates");
+        JSONArray date_range = (JSONArray) json_obj.get("date_range");
         for (int i = 0; i < rooms.size(); i++) {
             if (rooms.get(i).id == id) {
-                for (Object date_range_obj : dates_array) {
-                    JSONArray date_range = (JSONArray) date_range_obj;
-                    rooms.get(i).addRange(date_range);
-                }
+                rooms.get(i).addRange(date_range);
 
                 System.out.println("[INFO] Successfully added, available dates: " + rooms.get(i).getAvailableDates());
             }

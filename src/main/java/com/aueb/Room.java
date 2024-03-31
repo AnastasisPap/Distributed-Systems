@@ -10,10 +10,7 @@ import org.json.simple.parser.ParseException;
 
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 
 public class Room implements Serializable {
     public final String room_name;
@@ -42,7 +39,6 @@ public class Room implements Serializable {
             int end = Integer.parseInt(date_range.getLast().toString());
             addDateRange(Range.closed(start, end));
         }
-        System.out.println(dates);
     }
 
     // Dates should be in the form of DD/MM/YYYY (e.g. 25/10/2022)
@@ -64,8 +60,6 @@ public class Room implements Serializable {
 
         return this.available_days.encloses(Range.closed(start_epoch, end_epoch));
     }
-
-
 
     public void addDateRange(Range<Integer> date_range) {
         available_days.add(date_range);

@@ -1,21 +1,14 @@
 package com.aueb;
 
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeSet;
-import com.google.common.collect.TreeRangeSet;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Scanner;
 
 public class User {
@@ -74,27 +67,24 @@ public class User {
         int id = in.nextInt();
         in.nextLine();
         System.out.println("Selected room with ID " + id);
-        RangeSet<Integer> dates = TreeRangeSet.create();
 
         while (true) {
-            System.out.println("Enter date range of availabilities in the form of DD/MM/YYYY (e.g. 25/10/2024 - 29/10/2024). Type stop to stop input");
+            System.out.println("Enter date range of availabilities in the form of DD/MM/YYYY (e.g. 25/10/2024 - 29/10/2024). Type stop to exit");
             input = in.nextLine();
             if (input.equalsIgnoreCase("stop")) break;
 
             try {
                 int[] formatted_dates = handleDateRange(input);
-                dates.add(Range.closed(formatted_dates[0], formatted_dates[1]));
+                JSONObject json_obj = Utils.createJSONObject("add_availability");
+                JSONParser parser = new JSONParser();
+                JSONArray arr = (JSONArray) parser.parse("[" + formatted_dates[0] + "," + formatted_dates[1] + "]");
+                json_obj.put("date_range", arr);
+                json_obj.put("id", id);
+                out.writeUTF(json_obj.toJSONString());
             } catch (Exception e) {
                 System.out.println("Please re-enter the date: " + e.getLocalizedMessage());
             }
         }
-
-        JSONObject json_obj = Utils.createJSONObject("add_availability");
-        JSONParser parser = new JSONParser();
-        JSONArray arr = (JSONArray) parser.parse(dates.toString().replace("..", ","));
-        json_obj.put("dates", arr);
-        json_obj.put("id", id);
-        out.writeUTF(json_obj.toJSONString());
     }
 
     private int[] handleDateRange(String input) throws Exception {
