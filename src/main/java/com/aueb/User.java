@@ -3,10 +3,9 @@ package com.aueb;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -54,6 +53,7 @@ public class User {
                 (1) Add room
                 (2) Add availability for room
                 (3) Show your rooms
+                (4) Add rooms from config file
                 """);
         int selection = in.nextInt();
 
@@ -62,9 +62,14 @@ public class User {
             if (selection == 1) addRoom(out);
             else if (selection == 2) addAvailability(out);
             else if (selection == 3) showRooms(out);
+            else if (selection == 4) initializeFromConfig(out);
             else System.out.println("Invalid choice");
         } catch (Exception e) { e.printStackTrace(); }
     }
+
+    /*
+    ---------------------------- FILTERING ----------------------------
+     */
 
     private void filterRooms(DataOutputStream out) throws Exception {
         JSONObject json_obj = Utils.createJSONObject("filter_rooms");
@@ -90,10 +95,8 @@ public class User {
         }
 
         json_obj.put("filters", filter);
-        out.writeUTF(json_obj.toJSONString());
-
-        DataInputStream master_in = new DataInputStream(clientSocket.getInputStream());
-        System.out.println(master_in.readUTF());
+        String response = makeRequest(out, json_obj.toJSONString());
+        System.out.println(response);
     }
 
     private void filterRating(JSONObject filter) {
@@ -167,6 +170,10 @@ public class User {
         System.out.println();
     }
 
+    /*
+    ---------------------------- RATING ----------------------------
+     */
+
     private void rateRoom(DataOutputStream out) {
         System.out.println("Enter room ID");
         int id = in.nextInt();
@@ -185,6 +192,10 @@ public class User {
         }
     }
 
+    /*
+    ---------------------------- BOOK ----------------------------
+     */
+
     private void bookRoom(DataOutputStream out) {
         System.out.println("Enter room ID");
         int id = in.nextInt();
@@ -202,13 +213,19 @@ public class User {
         }
     }
 
+    /*
+    ---------------------------- SHOW ROOMS ----------------------------
+     */
+
     private void showRooms(DataOutputStream out) throws IOException {
         JSONObject json_obj = Utils.createJSONObject("show_rooms");
-        out.writeUTF(json_obj.toJSONString());
-
-        DataInputStream master_in = new DataInputStream(clientSocket.getInputStream());
-        System.out.println(master_in.readUTF());
+        String response = makeRequest(out, json_obj.toJSONString());
+        System.out.println(response);
     }
+
+    /*
+    ---------------------------- ADD ROOMS ----------------------------
+     */
 
     private void addRoom(DataOutputStream out) throws IOException {
         in.nextLine();
@@ -217,14 +234,36 @@ public class User {
             String room_str = in.nextLine();
             if (room_str.startsWith("stop")) break;
             Room room = new Room(room_str);
-            JSONObject json_obj = Utils.createJSONObject("add_room");
-            json_obj.put("room", room.getJSON());
-            json_obj.put("id", room.id);
-            out.writeUTF(json_obj.toJSONString());
+            sendRoom(out, room);
         }
     }
 
-    private void addAvailability(DataOutputStream out) throws Exception {
+    private void initializeFromConfig(DataOutputStream out) throws IOException, ParseException {
+        in.nextLine();
+        System.out.println("Give full path to json file: ");
+        String path = in.nextLine();
+        JSONParser parser = new JSONParser();
+
+        JSONArray rooms = (JSONArray) parser.parse(new FileReader(path));
+        for (Object room_obj : rooms) {
+            JSONObject room_json = (JSONObject) room_obj;
+            Room room = new Room(room_json);
+            sendRoom(out, room);
+        }
+    }
+
+    private void sendRoom(DataOutputStream out, Room room) throws IOException {
+        JSONObject json_obj = Utils.createJSONObject("add_room");
+        json_obj.put("room", room.getJSON());
+        json_obj.put("id", room.id);
+        out.writeUTF(json_obj.toJSONString());
+    }
+
+    /*
+    ---------------------------- ADD DATES ----------------------------
+     */
+
+    private void addAvailability(DataOutputStream out) {
         in.nextLine();
         String input = "";
         System.out.println("Enter the ID of the room:");
@@ -259,6 +298,13 @@ public class User {
 
         JSONParser parser = new JSONParser();
         return (JSONArray) parser.parse("[" + date_start + "," + date_end + "]");
+    }
+
+    private String makeRequest(DataOutputStream out, String request) throws IOException {
+        out.writeUTF(request);
+
+        DataInputStream master_in = new DataInputStream(clientSocket.getInputStream());
+        return master_in.readUTF();
     }
 
     public static void main(String[] args) {

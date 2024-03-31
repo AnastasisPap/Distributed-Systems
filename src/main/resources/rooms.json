@@ -1,0 +1,24 @@
+[
+  {
+    "room_name": "Big nice room",
+    "num_of_people": 10,
+    "area": "Athens",
+    "review": 4.5,
+    "num_of_reviews": 1000,
+    "room_image": "/usr/bin/images/room_name.png",
+    "id": 1,
+    "price": 10.1,
+    "available_dates": [[19723, 19732], [19754, 19844]]
+  },
+  {
+    "room_name": "Cozy room",
+    "num_of_people": 2,
+    "area": "Kiato",
+    "review": 3,
+    "num_of_reviews": 200,
+    "room_image": "/usr/bin/images/room_name.png",
+    "id": 2,
+    "price": 10.1,
+    "available_dates": [[19723, 19732], [19754, 19844]],
+  }
+]
