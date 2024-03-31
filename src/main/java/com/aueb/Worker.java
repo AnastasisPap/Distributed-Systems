@@ -6,11 +6,9 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.*;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,7 +23,7 @@ public class Worker {
         Worker worker = new Worker();
         try {
             worker.connectToMaster();
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) { throw new RuntimeException("Connection to Master refused"); }
     }
 
     public void listenForMasterRequests() {
@@ -36,25 +34,26 @@ public class Worker {
                 executor.submit(() -> processTask(input));
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Connection to Master lost");
         }
     }
 
     public void processTask(String input) {
         try {
             JSONObject json_obj = (JSONObject) parser.parse(input);
-            System.out.println("Function: " + json_obj.get("function"));
+
+            System.out.println("[INFO] Function: " + json_obj.get("function"));
             if (json_obj.get("function").toString().startsWith("add_room")) handleRoom((JSONObject) json_obj.get("room"));
             else if (json_obj.get("function").toString().startsWith("add_availability")) handleAvailability(json_obj);
             else if (json_obj.get("function").toString().startsWith("show_rooms")) showRooms();
-        } catch (ParseException e) {
+        } catch (ParseException | IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     public void handleAvailability(JSONObject json_obj) {
         int id = Integer.parseInt(json_obj.get("id").toString());
-        System.out.println("Searching " + rooms.size() + " room(s) for room with ID: " + id);
+        System.out.println("[INFO] Searching " + rooms.size() + " room(s) for room with ID: " + id);
         JSONArray dates_array = (JSONArray) json_obj.get("dates");
         for (int i = 0; i < rooms.size(); i++) {
             if (rooms.get(i).id == id) {
@@ -63,29 +62,25 @@ public class Worker {
                     rooms.get(i).available_days.add(epoch);
                 }
 
-                System.out.println("Successfully added, available dates: " + rooms.get(i).available_days);
+                System.out.println("[INFO] Successfully added, available dates: " + rooms.get(i).available_days);
             }
         }
     }
 
     public void handleRoom(JSONObject json_obj) {
-        System.out.println("Adding room: " + json_obj);
         Room room = new Room(json_obj);
         rooms.add(room);
-        System.out.println("Successfully stored room " + json_obj.get("id"));
+        System.out.println("[INFO] Successfully stored room " + json_obj.get("id"));
     }
 
-    public void showRooms() {
-        for (Room room : rooms) {
-            System.out.println("----------------------------------------------");
-            System.out.println("Room " + room.room_name + " (ID: " + room.id + ") located at " + room.area +
-                    " can house " + room.num_of_people + " and has a rating of " + room.rating + ". Available dates:");
-            for (int epoch : room.available_days) {
-                LocalDate date = LocalDate.ofEpochDay(epoch);
-                System.out.print(date + ", ");
-            }
-            System.out.println();
-        }
+    public void showRooms() throws IOException {
+        DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+        JSONArray rooms_json = new JSONArray();
+        for (Room room : rooms)
+            rooms_json.add(room.getJSON());
+        JSONObject fetched_rooms = Utils.createJSONObject("fetched_rooms");
+        fetched_rooms.put("rooms", rooms_json);
+        out.writeUTF(fetched_rooms.toString());
     }
 
     public void connectToMaster() throws IOException {
