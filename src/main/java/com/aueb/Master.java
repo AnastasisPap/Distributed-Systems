@@ -31,15 +31,14 @@ public class Master {
 
             executor.submit(() -> {
                 try {
-                    DataInputStream in = new DataInputStream(socket.getInputStream());
-                    String input = in.readUTF();
-                    System.out.println("Received: " + input);
-                    if (input.startsWith("WORKER")) {
-                        workers.add(socket);
-                        System.out.println("Worker added to pool");
-                    } else {
-                        System.out.println("User connected");
-                        dispatchTask(input);
+                    while (true) {
+                        DataInputStream in = new DataInputStream(socket.getInputStream());
+                        String input = in.readUTF();
+                        System.out.println("Received: " + input);
+                        if (input.startsWith("WORKER")) {
+                            workers.add(socket);
+                            System.out.println("Worker added to pool");
+                        } else dispatchTask(input);
                     }
                 } catch (Exception e) { e.printStackTrace(); }
             });
@@ -47,7 +46,7 @@ public class Master {
     }
 
     private void dispatchTask(String taskInput) throws IOException {
-        if (showRooms(taskInput)) {
+        if (taskInput.contains("show_rooms")) {
             DataOutputStream out;
             for (Socket workerSocket : workers) {
                 if (workerSocket.isClosed()) continue;
@@ -55,10 +54,9 @@ public class Master {
                 out.writeUTF(taskInput);
             }
         } else {
-            System.out.println("Task: " + taskInput);
             int workerIdx = 0;
             try {
-                String id = ((JSONObject) ((JSONObject) parser.parse(taskInput))).get("id").toString();
+                String id = ((JSONObject) parser.parse(taskInput)).get("id").toString();
                 workerIdx = id.hashCode() % workers.size();
             } catch (ParseException e) {
                 throw new RuntimeException(e);
@@ -68,10 +66,6 @@ public class Master {
             DataOutputStream out = new DataOutputStream(selectedWorker.getOutputStream());
             out.writeUTF(taskInput);
         }
-    }
-
-    private boolean showRooms(String task) {
-        return task.contains("show_rooms");
     }
 
     public static void main(String[] args) {
