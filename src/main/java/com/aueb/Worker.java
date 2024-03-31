@@ -47,8 +47,22 @@ public class Worker {
             else if (json_obj.get("function").toString().startsWith("add_availability")) handleAvailability(json_obj);
             else if (json_obj.get("function").toString().startsWith("show_rooms")) showRooms();
             else if (json_obj.get("function").toString().startsWith("book_room")) bookRoom(json_obj);
+            else if (json_obj.get("function").toString().startsWith("rate_room")) rateRoom(json_obj);
         } catch (ParseException | IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void rateRoom(JSONObject json_obj) {
+        int id = Integer.parseInt(json_obj.get("id").toString());
+        float rating = Float.parseFloat(json_obj.get("rating").toString());
+        System.out.println("[INFO] Searching " + rooms.size() + " room(s) for room with ID: " + id);
+
+        for (int i = 0; i < rooms.size(); i++) {
+            if (rooms.get(i).id == id) {
+                rooms.get(i).rateRoom(rating);
+                System.out.println("Rated room with ID " + id + " with " + rating + " stars.");
+            }
         }
     }
 
@@ -74,7 +88,7 @@ public class Worker {
         }
     }
 
-    public void handleAvailability(JSONObject json_obj) {
+    private void handleAvailability(JSONObject json_obj) {
         int id = Integer.parseInt(json_obj.get("id").toString());
         System.out.println("[INFO] Searching " + rooms.size() + " room(s) for room with ID: " + id);
         JSONArray date_range = (JSONArray) json_obj.get("date_range");
@@ -87,13 +101,13 @@ public class Worker {
         }
     }
 
-    public void handleRoom(JSONObject json_obj) {
+    private void handleRoom(JSONObject json_obj) {
         Room room = new Room(json_obj);
         rooms.add(room);
         System.out.println("[INFO] Successfully stored room " + json_obj.get("id"));
     }
 
-    public void showRooms() throws IOException {
+    private void showRooms() throws IOException {
         DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
         JSONArray rooms_json = new JSONArray();
         for (Room room : rooms)
@@ -103,7 +117,7 @@ public class Worker {
         out.writeUTF(fetched_rooms.toString());
     }
 
-    public void connectToMaster() throws IOException {
+    private void connectToMaster() throws IOException {
         clientSocket = new Socket("127.0.0.1", Master.PORT);
 
         DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());

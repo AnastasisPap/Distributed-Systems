@@ -38,7 +38,7 @@ public class User {
             DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
             if (selection == 1) bookRoom(out);
             else if (selection == 2) System.out.println("book room");
-            else if (selection == 3) System.out.println("book room");
+            else if (selection == 3) rateRoom(out);
             else System.out.println("Invalid choice");
         } catch (Exception e) { e.printStackTrace(); }
     }
@@ -60,6 +60,24 @@ public class User {
             else if (selection == 3) showRooms(out);
             else System.out.println("Invalid choice");
         } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void rateRoom(DataOutputStream out) {
+        System.out.println("Enter room ID");
+        int id = in.nextInt();
+        in.nextLine();
+        System.out.println("Enter the rating in the range of [1-5]");
+        float rating = in.nextFloat();
+        in.nextLine();
+        try {
+            if (rating < 1 || rating > 5) throw new RuntimeException("Rating out of range");
+            JSONObject json_obj = Utils.createJSONObject("rate_room");
+            json_obj.put("id", id);
+            json_obj.put("rating", rating);
+            out.writeUTF(json_obj.toJSONString());
+        } catch (Exception e) {
+            System.out.println("Please re-enter the rating: " + e);
+        }
     }
 
     private void bookRoom(DataOutputStream out) {

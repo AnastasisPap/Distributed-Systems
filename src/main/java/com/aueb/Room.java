@@ -17,9 +17,9 @@ public class Room implements Serializable {
     public final String area;
     public final int num_of_people;
     public final float price;
-    public final float rating;
-    public final int rating_count;
     public final int id;
+    public int rating_count;
+    public float rating;
     public RangeSet<Integer> available_days = TreeRangeSet.create();
 
     public Room(JSONObject json_obj)
@@ -52,6 +52,11 @@ public class Room implements Serializable {
         this.id = Integer.parseInt(items[4].trim());
         this.rating = 0.0f;
         this.rating_count = 0;
+    }
+
+    public void rateRoom(float rating) {
+        this.rating = (this.rating * this.rating_count + rating) / (this.rating_count + 1);
+        this.rating_count++;
     }
 
     public void addDateRange(Range<Integer> date_range) {
