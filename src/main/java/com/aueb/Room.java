@@ -54,13 +54,6 @@ public class Room implements Serializable {
         this.rating_count = 0;
     }
 
-    public boolean isAvailable(LocalDate start, LocalDate end) {
-        int start_epoch = (int) start.toEpochDay();
-        int end_epoch = (int) end.toEpochDay();
-
-        return this.available_days.encloses(Range.closed(start_epoch, end_epoch));
-    }
-
     public void addDateRange(Range<Integer> date_range) {
         available_days.add(date_range);
 
@@ -91,13 +84,14 @@ public class Room implements Serializable {
         return dates_str;
     }
 
-    public void book(LocalDate start, LocalDate end) {
-        if (!isAvailable(start, end)) return;
+    public boolean book(JSONArray date_range_json) {
+        int start_date = Integer.parseInt(date_range_json.get(0).toString());
+        int end_date = Integer.parseInt(date_range_json.get(1).toString());
 
-        int start_epoch = (int) start.toEpochDay();
-        int end_epoch = (int) end.toEpochDay();
+        if (!available_days.encloses(Range.closed(start_date, end_date))) return false;
 
-        this.available_days.remove(Range.closed(start_epoch, end_epoch));
+        this.available_days.remove(Range.closed(start_date-1, end_date+1));
+        return true;
     }
 
     public JSONObject getJSON() {

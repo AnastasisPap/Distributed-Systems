@@ -7,6 +7,7 @@ import org.json.simple.parser.ParseException;
 
 import java.io.*;
 import java.net.Socket;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,13 +46,35 @@ public class Worker {
             if (json_obj.get("function").toString().startsWith("add_room")) handleRoom((JSONObject) json_obj.get("room"));
             else if (json_obj.get("function").toString().startsWith("add_availability")) handleAvailability(json_obj);
             else if (json_obj.get("function").toString().startsWith("show_rooms")) showRooms();
+            else if (json_obj.get("function").toString().startsWith("book_room")) bookRoom(json_obj);
         } catch (ParseException | IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+    private void bookRoom(JSONObject json_obj) {
+        int id = Integer.parseInt(json_obj.get("id").toString());
+        System.out.println("[INFO] Searching " + rooms.size() + " room(s) for room with ID: " + id);
+        JSONArray date_range = (JSONArray) json_obj.get("date_range");
+
+        for (int i = 0; i < rooms.size(); i++) {
+            if (rooms.get(i).id == id) {
+                LocalDate start_date = LocalDate.ofEpochDay(Integer.parseInt(date_range.get(0).toString()));
+                LocalDate end_date = LocalDate.ofEpochDay(Integer.parseInt(date_range.get(1).toString()));
+                if (rooms.get(i).book(date_range)) {
+                    System.out.println("Successfully booked room with ID: " + id + " for " + start_date + " until " +
+                            end_date + ". Current available days:");
+                    System.out.println(rooms.get(i).getAvailableDates());
+                } else {
+                    System.out.println("Couldn't book room with ID " + id + " for " + start_date + " until " + end_date
+                            + ". Available days:");
+                    System.out.println(rooms.get(i).getAvailableDates());
+                }
+            }
+        }
+    }
+
     public void handleAvailability(JSONObject json_obj) {
-        System.out.println(json_obj);
         int id = Integer.parseInt(json_obj.get("id").toString());
         System.out.println("[INFO] Searching " + rooms.size() + " room(s) for room with ID: " + id);
         JSONArray date_range = (JSONArray) json_obj.get("date_range");

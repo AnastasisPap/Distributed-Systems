@@ -4,6 +4,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import javax.xml.crypto.Data;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
@@ -19,12 +20,30 @@ public class User {
         System.out.println("Choose (1) for user, (2) for manager.");
 
         int input = in.nextInt();
-        if (input == 1) {
-            System.out.println("Selected user");
-        } else manager();
+        if (input == 1) user();
+        else manager();
     }
 
-    public void manager() {
+    private void user() {
+        System.out.print("""
+                Type the number to choose function:
+                (1) Book room
+                (2) Filter room
+                (3) Rate room
+                """);
+        int selection = in.nextInt();
+
+        try {
+            Socket clientSocket = new Socket("127.0.0.1", Master.PORT);
+            DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+            if (selection == 1) bookRoom(out);
+            else if (selection == 2) System.out.println("book room");
+            else if (selection == 3) System.out.println("book room");
+            else System.out.println("Invalid choice");
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void manager() {
         System.out.print("""
                 Type the number to choose function:
                 (1) Add room
@@ -39,7 +58,25 @@ public class User {
             if (selection == 1) addRoom(out);
             else if (selection == 2) addAvailability(out);
             else if (selection == 3) showRooms(out);
+            else System.out.println("Invalid choice");
         } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void bookRoom(DataOutputStream out) {
+        System.out.println("Enter room ID");
+        int id = in.nextInt();
+        in.nextLine();
+        System.out.println("Enter date range in the form of DD/MM/YYYY (e.g. 25/10/2024-29/10/2024)");
+        String date_range = in.nextLine();
+        try {
+            JSONArray range = handleDateRange(date_range);
+            JSONObject json_obj = Utils.createJSONObject("book_room");
+            json_obj.put("id", id);
+            json_obj.put("date_range", range);
+            out.writeUTF(json_obj.toJSONString());
+        } catch (Exception e) {
+            System.out.println("Please re-enter the date: " + e);
+        }
     }
 
     private void showRooms(DataOutputStream out) throws IOException {
@@ -75,10 +112,8 @@ public class User {
             if (input.equalsIgnoreCase("stop")) break;
 
             try {
-                int[] formatted_dates = handleDateRange(input);
                 JSONObject json_obj = Utils.createJSONObject("add_availability");
-                JSONParser parser = new JSONParser();
-                JSONArray arr = (JSONArray) parser.parse("[" + formatted_dates[0] + "," + formatted_dates[1] + "]");
+                JSONArray arr = handleDateRange(input);
                 json_obj.put("date_range", arr);
                 json_obj.put("id", id);
                 out.writeUTF(json_obj.toJSONString());
@@ -88,7 +123,7 @@ public class User {
         }
     }
 
-    private int[] handleDateRange(String input) throws Exception {
+    private JSONArray handleDateRange(String input) throws Exception {
         String[] dates = input.split("-");
         if (dates.length != 2) throw new Exception("Wrong format");
 
@@ -96,7 +131,8 @@ public class User {
         int date_end = (int) LocalDate.parse(dates[1].trim(), formatter).toEpochDay();
         if (date_start >= date_end) throw new Exception("Wrong range");
 
-        return new int[]{date_start, date_end};
+        JSONParser parser = new JSONParser();
+        return (JSONArray) parser.parse("[" + date_start + "," + date_end + "]");
     }
 
     public static void main(String[] args) {
