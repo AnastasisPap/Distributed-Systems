@@ -53,7 +53,6 @@ public class Master {
     private void handleFetchedRooms(String taskInput) throws ParseException {
         JSONParser new_parser = new JSONParser();
         JSONObject json_obj = (JSONObject) new_parser.parse(taskInput);
-        JSONArray dates = (JSONArray) json_obj.get("rooms");
         for (Object room_obj : (JSONArray) json_obj.get("rooms"))
             showRoom((JSONObject) room_obj);
     }
@@ -66,10 +65,11 @@ public class Master {
         output += "Average review: " + json_room.get("review") + " (" + json_room.get("num_of_reviews") + " review(s))\n";
         output += "Price per day: " + json_room.get("price") + "\n";
         JSONArray dates = (JSONArray) json_room.get("available_dates");
-        output += "Available days (" + (dates.size()) + "):\n";
-        for (Object date_epoch : dates) {
-            LocalDate date = LocalDate.ofEpochDay(Integer.parseInt(date_epoch.toString()));
-            output += date + ", ";
+        for (Object date_range : dates) {
+            JSONArray date_interval = (JSONArray) date_range;
+            LocalDate start_date = LocalDate.ofEpochDay(Integer.parseInt(date_interval.getFirst().toString()));
+            LocalDate end_date = LocalDate.ofEpochDay(Integer.parseInt(date_interval.getLast().toString()));
+            output += start_date + " until " + end_date + ", ";
         }
         output += "\n";
         System.out.println(output);

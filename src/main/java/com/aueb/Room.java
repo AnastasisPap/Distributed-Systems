@@ -109,7 +109,7 @@ public class Room implements Serializable {
         res.put("review", this.rating);
         res.put("num_of_reviews", this.rating_count);
         res.put("id", this.id);
-        String ranges_str = (new ArrayList<>(available_days.asDescendingSetOfRanges())).toString();
+        String ranges_str = (new ArrayList<>(available_days.asDescendingSetOfRanges())).toString().replace("..", ",");
         JSONParser parser = new JSONParser();
 
         try {
