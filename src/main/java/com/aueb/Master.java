@@ -24,7 +24,7 @@ public class Master {
 
     private void start() throws IOException, ClassNotFoundException {
         ServerSocket server = new ServerSocket(PORT);
-        System.out.println("Server listening at " + PORT);
+        System.out.println("[LOG] Server listening at " + PORT);
 
         while (true) {
             Socket socket = server.accept();
@@ -34,13 +34,13 @@ public class Master {
                     while (true) {
                         DataInputStream in = new DataInputStream(socket.getInputStream());
                         String input = in.readUTF();
-                        System.out.println("Received: " + input);
-                        if (input.startsWith("WORKER")) {
-                            workers.add(socket);
-                            System.out.println("Worker added to pool");
-                        } else dispatchTask(input);
+                        System.out.println("[LOG] Received: " + input);
+                        if (input.startsWith("WORKER")) workers.add(socket);
+                        else dispatchTask(input);
                     }
-                } catch (Exception e) { e.printStackTrace(); }
+                } catch (Exception e) {
+                    System.out.println("[WARNING] Lost connection");
+                }
             });
         }
     }
