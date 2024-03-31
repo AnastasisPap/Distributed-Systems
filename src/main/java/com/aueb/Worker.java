@@ -48,9 +48,23 @@ public class Worker {
             else if (json_obj.get("function").toString().startsWith("show_rooms")) showRooms();
             else if (json_obj.get("function").toString().startsWith("book_room")) bookRoom(json_obj);
             else if (json_obj.get("function").toString().startsWith("rate_room")) rateRoom(json_obj);
+            else if (json_obj.get("function").toString().startsWith("filter_rooms")) filterRooms((JSONObject) json_obj.get("filters"));
         } catch (ParseException | IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void filterRooms(JSONObject json_obj) throws IOException {
+        JSONArray filtered_rooms = new JSONArray();
+        for (int i = 0; i < rooms.size(); i++) {
+            if (rooms.get(i).satisfiesConditions(json_obj))
+                filtered_rooms.add(rooms.get(i).id);
+        }
+
+        JSONObject rooms = new JSONObject();
+        rooms.put("filtered_rooms", filtered_rooms);
+        DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+        out.writeUTF(rooms.toJSONString());
     }
 
     private void rateRoom(JSONObject json_obj) {
@@ -117,7 +131,7 @@ public class Worker {
         out.writeUTF(fetched_rooms.toString());
     }
 
-    private void connectToMaster() throws IOException {
+    public void connectToMaster() throws IOException {
         clientSocket = new Socket("127.0.0.1", Master.PORT);
 
         DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());

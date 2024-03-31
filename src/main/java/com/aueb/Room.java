@@ -11,6 +11,7 @@ import org.json.simple.parser.ParseException;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Map;
 
 public class Room implements Serializable {
     public final String room_name;
@@ -57,6 +58,35 @@ public class Room implements Serializable {
     public void rateRoom(float rating) {
         this.rating = (this.rating * this.rating_count + rating) / (this.rating_count + 1);
         this.rating_count++;
+    }
+
+    public boolean satisfiesConditions(JSONObject filter) {
+        if (filter.containsKey("area") && !filter.get("area").toString().equals(this.area)) return false;
+        if (filter.containsKey("rating") && Float.parseFloat(filter.get("rating").toString()) < this.rating) return false;
+        if (filter.containsKey("price")) {
+            JSONObject price = (JSONObject) filter.get("price");
+
+            if (this.price < Float.parseFloat(price.get("min_price").toString()) ||
+                this.price > Float.parseFloat(price.get("max_price").toString())) return false;
+        }
+        if (filter.containsKey("capacity")) {
+            JSONObject capacity = (JSONObject) filter.get("capacity");
+
+            if (this.num_of_people < Integer.parseInt(capacity.get("min_cap").toString()) ||
+                this.num_of_people > Integer.parseInt(capacity.get("max_cap").toString())) return false;
+        }
+        if (filter.containsKey("dates")) {
+            JSONArray dates = (JSONArray) filter.get("dates");
+
+            for (Object date_range_obj : dates) {
+                JSONArray date_range = (JSONArray) date_range_obj;
+                int start_date = Integer.parseInt(date_range.get(0).toString());
+                int end_date = Integer.parseInt(date_range.get(1).toString());
+                if (!available_days.encloses(Range.closed(start_date, end_date))) return false;
+            }
+        }
+
+        return true;
     }
 
     public void addDateRange(Range<Integer> date_range) {

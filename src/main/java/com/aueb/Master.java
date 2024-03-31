@@ -10,7 +10,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,15 +29,24 @@ public class Master {
 
         while (true) {
             Socket socket = server.accept();
+            DataInputStream in = new DataInputStream(socket.getInputStream());
 
+            // For each new connection (either CLI user or Worker), open a new thread
+            // Each thread corresponds to a CLI user socket or a Worker socket
             executor.submit(() -> {
                 try {
-                    while (true) {
-                        DataInputStream in = new DataInputStream(socket.getInputStream());
-                        String input = in.readUTF();
+                    String input = "";
+                    // While loop is used to constantly listen for inputs
+                    // Reasoning behind condition on while loop:
+                    // If the input initializes worker -> input has WORKER -> only read input back from the Worker at specific times
+                    // If the input is from the CLI -> constantly read the input
+                    while (!input.startsWith("WORKER")) {
+                        input = in.readUTF();
                         System.out.println("[INFO] Received: " + input);
-                        if (input.startsWith("WORKER")) workers.add(socket);
-                        else dispatchTask(input);
+                        if (input.startsWith("WORKER")) {
+                            workers.add(socket);
+                            System.out.println("Worker added");
+                        } else dispatchTask(input);
                     }
                 } catch (Exception e) {
                     System.out.println("[WARNING] Lost connection because of error: " + e);
@@ -44,17 +55,40 @@ public class Master {
         }
     }
 
-    private void dispatchTask(String taskInput) throws IOException, ParseException {
+    private void dispatchTask(String taskInput) throws IOException, InterruptedException {
         if (taskInput.contains("show_rooms")) handleRequestRooms(taskInput);
-        else if (taskInput.contains("fetched_rooms")) handleFetchedRooms(taskInput);
+        else if (taskInput.contains("filter_rooms")) handleRoomFilter(taskInput);
         else handleUserTask(taskInput);
     }
 
-    private void handleFetchedRooms(String taskInput) throws ParseException {
-        JSONParser new_parser = new JSONParser();
-        JSONObject json_obj = (JSONObject) new_parser.parse(taskInput);
-        for (Object room_obj : (JSONArray) json_obj.get("rooms"))
-            showRoom((JSONObject) room_obj);
+    private void handleRoomFilter(String taskInput) throws InterruptedException {
+        Set<Integer> filtered_room_ids = new HashSet<>();
+        ArrayList<Thread> worker_threads = new ArrayList<>();
+
+        for (Socket socket : workers) {
+            Thread worker_thread = new Thread(() -> {
+                try {
+                    DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+                    out.writeUTF(taskInput);
+
+                    DataInputStream in = new DataInputStream(socket.getInputStream());
+                    String response = in.readUTF();
+                    JSONParser parser = new JSONParser();
+                    JSONObject response_json = (JSONObject) parser.parse(response);
+                    for (Object id : (JSONArray) response_json.get("filtered_rooms"))
+                        filtered_room_ids.add(Integer.parseInt(id.toString()));
+
+                } catch (IOException | ParseException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            worker_threads.add(worker_thread);
+            worker_thread.start();
+        }
+
+        for (Thread worker_thread : worker_threads) worker_thread.join();
+        System.out.println("Room IDs: " + filtered_room_ids);
     }
 
     private void showRoom(JSONObject json_room) {
@@ -72,17 +106,25 @@ public class Master {
             output += start_date + " until " + end_date + ", ";
         }
         output += "\n";
-        System.out.println(output);
+        System.out.print(output);
     }
 
-    private void handleRequestRooms(String taskInput) throws IOException {
-        DataOutputStream out;
+    private void handleRequestRooms(String taskInput) {
         for (Socket workerSocket : workers) {
-            out = new DataOutputStream(workerSocket.getOutputStream());
-            if (!workerSocket.isClosed()) {
-                System.out.println(taskInput);
-                out.writeUTF(taskInput);
-            }
+            new Thread(() -> {
+                try {
+                    DataOutputStream out = new DataOutputStream(workerSocket.getOutputStream());
+                    if (!workerSocket.isClosed()) out.writeUTF(taskInput);
+
+                    DataInputStream in = new DataInputStream(workerSocket.getInputStream());
+                    String response = in.readUTF();
+                    JSONParser new_parser = new JSONParser();
+                    JSONObject response_json = (JSONObject) new_parser.parse(response);
+                    for (Object room : (JSONArray) response_json.get("rooms"))
+                        showRoom((JSONObject) room);
+
+                } catch (IOException | ParseException e) { e.printStackTrace(); }
+            }).start();
         }
     }
 

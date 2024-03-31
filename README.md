@@ -6,3 +6,4 @@ User:
 
 Optimizations:
 - Use hashmap for rooms in each worker with key=ID, value=Room object
+- Use config file to add rooms, availability dates
