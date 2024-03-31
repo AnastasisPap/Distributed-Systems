@@ -45,8 +45,8 @@ public class Master {
                         System.out.println("[INFO] Received: " + input);
                         if (input.startsWith("WORKER")) {
                             workers.add(socket);
-                            System.out.println("Worker added");
-                        } else dispatchTask(input);
+                            System.out.println("[INFO] Worker added");
+                        } else dispatchTask(input, socket);
                     }
                 } catch (Exception e) {
                     System.out.println("[WARNING] Lost connection because of error: " + e);
@@ -55,13 +55,13 @@ public class Master {
         }
     }
 
-    private void dispatchTask(String taskInput) throws IOException, InterruptedException {
-        if (taskInput.contains("show_rooms")) handleRequestRooms(taskInput);
-        else if (taskInput.contains("filter_rooms")) handleRoomFilter(taskInput);
+    private void dispatchTask(String taskInput, Socket socket) throws IOException, InterruptedException {
+        if (taskInput.contains("show_rooms")) handleRequestRooms(taskInput, socket);
+        else if (taskInput.contains("filter_rooms")) handleRoomFilter(taskInput, socket);
         else handleUserTask(taskInput);
     }
 
-    private void handleRoomFilter(String taskInput) throws InterruptedException {
+    private void handleRoomFilter(String taskInput, Socket cliSocket) throws InterruptedException, IOException {
         Set<Integer> filtered_room_ids = new HashSet<>();
         ArrayList<Thread> worker_threads = new ArrayList<>();
 
@@ -88,10 +88,12 @@ public class Master {
         }
 
         for (Thread worker_thread : worker_threads) worker_thread.join();
-        System.out.println("Room IDs: " + filtered_room_ids);
+        DataOutputStream cli_out = new DataOutputStream(cliSocket.getOutputStream());
+        cli_out.writeUTF("------------------------------\nFetched room IDs: " + filtered_room_ids.toString()
+                .replace("[", "").replace("]", ""));
     }
 
-    private void showRoom(JSONObject json_room) {
+    private String formatRoom(JSONObject json_room) {
         String output = "---------------------------------------\n";
         output += "Room name: " + json_room.get("room_name") + " with ID: " + json_room.get("id") + "\n";
         output += "Area: " + json_room.get("area") + "\n";
@@ -106,12 +108,15 @@ public class Master {
             output += start_date + " until " + end_date + ", ";
         }
         output += "\n";
-        System.out.print(output);
+        return output;
     }
 
-    private void handleRequestRooms(String taskInput) {
+    private void handleRequestRooms(String taskInput, Socket cliSocket) throws InterruptedException, IOException {
+        ArrayList<Thread> worker_threads = new ArrayList<>();
+
+        final String[] output = {""};
         for (Socket workerSocket : workers) {
-            new Thread(() -> {
+            Thread worker_thread = new Thread(() -> {
                 try {
                     DataOutputStream out = new DataOutputStream(workerSocket.getOutputStream());
                     if (!workerSocket.isClosed()) out.writeUTF(taskInput);
@@ -120,12 +125,23 @@ public class Master {
                     String response = in.readUTF();
                     JSONParser new_parser = new JSONParser();
                     JSONObject response_json = (JSONObject) new_parser.parse(response);
-                    for (Object room : (JSONArray) response_json.get("rooms"))
-                        showRoom((JSONObject) room);
+                    for (Object room : (JSONArray) response_json.get("rooms")) {
+                        String room_str = formatRoom((JSONObject) room);
+                        output[0] += room_str;
+                    }
 
                 } catch (IOException | ParseException e) { e.printStackTrace(); }
-            }).start();
+            });
+
+            worker_threads.add(worker_thread);
+            worker_thread.start();
         }
+
+        for (Thread worker_thread : worker_threads)
+            worker_thread.join();
+
+        DataOutputStream cli_out = new DataOutputStream(cliSocket.getOutputStream());
+        cli_out.writeUTF(output[0]);
     }
 
     private void handleUserTask(String taskInput) throws IOException {

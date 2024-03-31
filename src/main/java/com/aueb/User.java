@@ -4,6 +4,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
@@ -12,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 
 public class User {
+    private Socket clientSocket;
     private final Scanner in = new Scanner(System.in);
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/M/yyyy");
 
@@ -19,8 +21,13 @@ public class User {
         System.out.println("Choose (1) for user, (2) for manager.");
 
         int input = in.nextInt();
-        if (input == 1) user();
-        else manager();
+        try {
+            clientSocket = new Socket("127.0.0.1", Master.PORT);
+            if (input == 1) user();
+            else manager();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void user() {
@@ -33,7 +40,6 @@ public class User {
         int selection = in.nextInt();
 
         try {
-            Socket clientSocket = new Socket("127.0.0.1", Master.PORT);
             DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
             if (selection == 1) bookRoom(out);
             else if (selection == 2) filterRooms(out);
@@ -52,7 +58,6 @@ public class User {
         int selection = in.nextInt();
 
         try {
-            Socket clientSocket = new Socket("127.0.0.1", Master.PORT);
             DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
             if (selection == 1) addRoom(out);
             else if (selection == 2) addAvailability(out);
@@ -86,6 +91,9 @@ public class User {
 
         json_obj.put("filters", filter);
         out.writeUTF(json_obj.toJSONString());
+
+        DataInputStream master_in = new DataInputStream(clientSocket.getInputStream());
+        System.out.println(master_in.readUTF());
     }
 
     private void filterRating(JSONObject filter) {
@@ -197,6 +205,9 @@ public class User {
     private void showRooms(DataOutputStream out) throws IOException {
         JSONObject json_obj = Utils.createJSONObject("show_rooms");
         out.writeUTF(json_obj.toJSONString());
+
+        DataInputStream master_in = new DataInputStream(clientSocket.getInputStream());
+        System.out.println(master_in.readUTF());
     }
 
     private void addRoom(DataOutputStream out) throws IOException {
