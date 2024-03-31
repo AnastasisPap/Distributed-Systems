@@ -1,15 +1,21 @@
 package com.aueb;
 
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
-import javax.swing.text.DateFormatter;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 
 public class User {
@@ -40,7 +46,7 @@ public class User {
             if (selection == 1) addRoom(out);
             else if (selection == 2) addAvailability(out);
             else if (selection == 3) showRooms(out);
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     private void showRooms(DataOutputStream out) throws IOException {
@@ -61,33 +67,45 @@ public class User {
         }
     }
 
-    private void addAvailability(DataOutputStream out) throws IOException {
+    private void addAvailability(DataOutputStream out) throws Exception {
         in.nextLine();
         String input = "";
         System.out.println("Enter the ID of the room:");
         int id = in.nextInt();
         in.nextLine();
         System.out.println("Selected room with ID " + id);
-        ArrayList<Integer> dates_epochs = new ArrayList<>();
+        RangeSet<Integer> dates = TreeRangeSet.create();
 
         while (true) {
-            System.out.println("Enter date of availability in the form of DD/MM/YYYY (e.g. 25/10/2024). Type stop to stop input");
+            System.out.println("Enter date range of availabilities in the form of DD/MM/YYYY (e.g. 25/10/2024 - 29/10/2024). Type stop to stop input");
             input = in.nextLine();
             if (input.equalsIgnoreCase("stop")) break;
 
             try {
-                LocalDate date = LocalDate.parse(input, formatter);
-                System.out.println("Added date: " + date);
-                dates_epochs.add(((int)date.toEpochDay()));
-            } catch (DateTimeParseException e) {
+                int[] formatted_dates = handleDateRange(input);
+                dates.add(Range.closed(formatted_dates[0], formatted_dates[1]));
+            } catch (Exception e) {
                 System.out.println("Please re-enter the date: " + e.getLocalizedMessage());
             }
         }
 
         JSONObject json_obj = Utils.createJSONObject("add_availability");
-        json_obj.put("dates", dates_epochs);
+        JSONParser parser = new JSONParser();
+        JSONArray arr = (JSONArray) parser.parse(dates.toString().replace("..", ","));
+        json_obj.put("dates", arr);
         json_obj.put("id", id);
         out.writeUTF(json_obj.toJSONString());
+    }
+
+    private int[] handleDateRange(String input) throws Exception {
+        String[] dates = input.split("-");
+        if (dates.length != 2) throw new Exception("Wrong format");
+
+        int date_start = (int) LocalDate.parse(dates[0].trim(), formatter).toEpochDay();
+        int date_end = (int) LocalDate.parse(dates[1].trim(), formatter).toEpochDay();
+        if (date_start >= date_end) throw new Exception("Wrong range");
+
+        return new int[]{date_start, date_end};
     }
 
     public static void main(String[] args) {

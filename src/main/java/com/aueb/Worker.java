@@ -52,17 +52,18 @@ public class Worker {
     }
 
     public void handleAvailability(JSONObject json_obj) {
+        System.out.println(json_obj);
         int id = Integer.parseInt(json_obj.get("id").toString());
         System.out.println("[INFO] Searching " + rooms.size() + " room(s) for room with ID: " + id);
         JSONArray dates_array = (JSONArray) json_obj.get("dates");
         for (int i = 0; i < rooms.size(); i++) {
             if (rooms.get(i).id == id) {
-                for (Object date : dates_array) {
-                    int epoch = Integer.parseInt(date.toString());
-                    rooms.get(i).available_days.add(epoch);
+                for (Object date_range_obj : dates_array) {
+                    JSONArray date_range = (JSONArray) date_range_obj;
+                    rooms.get(i).addRange(date_range);
                 }
 
-                System.out.println("[INFO] Successfully added, available dates: " + rooms.get(i).available_days);
+                System.out.println("[INFO] Successfully added, available dates: " + rooms.get(i).getAvailableDates());
             }
         }
     }

@@ -1,7 +1,12 @@
 package com.aueb;
 
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -18,8 +23,7 @@ public class Room implements Serializable {
     public final float rating;
     public final int rating_count;
     public final int id;
-    public Set<Integer> available_days = new HashSet<>();
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/MM/yyyy");
+    public RangeSet<Integer> available_days = TreeRangeSet.create();
 
     public Room(JSONObject json_obj)
     {
@@ -33,11 +37,15 @@ public class Room implements Serializable {
         JSONArray dates = (JSONArray) json_obj.get("available_dates");
 
         for (Object date_obj : dates) {
-            JSONObject date = (JSONObject) date_obj;
-            available_days.add(Integer.parseInt(date.toString()));
+            JSONArray date_range = (JSONArray) date_obj;
+            int start = Integer.parseInt(date_range.getFirst().toString());
+            int end = Integer.parseInt(date_range.getLast().toString());
+            addDateRange(Range.closed(start, end));
         }
+        System.out.println(dates);
     }
 
+    // Dates should be in the form of DD/MM/YYYY (e.g. 25/10/2022)
     public Room(String input)
     {
         String[] items = input.split(",");
@@ -50,39 +58,52 @@ public class Room implements Serializable {
         this.rating_count = 0;
     }
 
-    // Dates should be in the form of DD/MM/YYYY (e.g. 25/10/2022)
-    public Room(String room_name, String area, int num_of_people, float price, int id, String[] dates) {
-        this.room_name = room_name;
-        this.area = area;
-        this.available_days = convertToEpochs(dates);
-        this.num_of_people = num_of_people;
-        this.price = price;
-        this.rating = 0;
-        this.rating_count = 0;
-        this.id = id;
+    public boolean isAvailable(LocalDate start, LocalDate end) {
+        int start_epoch = (int) start.toEpochDay();
+        int end_epoch = (int) end.toEpochDay();
+
+        return this.available_days.encloses(Range.closed(start_epoch, end_epoch));
     }
 
-    private Set<Integer> convertToEpochs(String[] dates) {
-        Set<Integer> dates_epochs = new HashSet<>();
 
-        for (String date : dates) {
-            int epoch = (int) LocalDate.parse(date, formatter).toEpochDay();
-            dates_epochs.add(epoch);
+
+    public void addDateRange(Range<Integer> date_range) {
+        available_days.add(date_range);
+
+        ArrayList<Range<Integer>> ranges_list = new ArrayList<>(available_days.asDescendingSetOfRanges());
+        for (int i = 1; i < ranges_list.size(); i++) {
+            Range<Integer> prev = ranges_list.get(i);
+            Range<Integer> curr = ranges_list.get(i-1);
+            if (prev.upperEndpoint() == curr.lowerEndpoint()-1) available_days.add(Range.closed(
+                    prev.upperEndpoint(), curr.lowerEndpoint()));
+        }
+    }
+
+    public void addRange(JSONArray date_range) {
+        int start = Integer.parseInt(date_range.getFirst().toString());
+        int end = Integer.parseInt(date_range.getLast().toString());
+        Range<Integer> date = Range.closed(start, end);
+        addDateRange(date);
+    }
+
+    public String getAvailableDates() {
+        String dates_str = "";
+        for (Range<Integer> date_range : available_days.asRanges()) {
+            LocalDate start_date = LocalDate.ofEpochDay(date_range.lowerEndpoint());
+            LocalDate end_date = LocalDate.ofEpochDay(date_range.upperEndpoint());
+            dates_str += start_date + " to " + end_date + ",";
         }
 
-        return dates_epochs;
+        return dates_str;
     }
 
-    public boolean isAvailable(LocalDate date) {
-        int epoch = (int) date.toEpochDay();
+    public void book(LocalDate start, LocalDate end) {
+        if (!isAvailable(start, end)) return;
 
-        return this.available_days.contains(epoch);
-    }
+        int start_epoch = (int) start.toEpochDay();
+        int end_epoch = (int) end.toEpochDay();
 
-    public void book(LocalDate date) {
-        if (!isAvailable(date)) return;
-
-        this.available_days.remove(((int) date.toEpochDay()));
+        this.available_days.remove(Range.closed(start_epoch, end_epoch));
     }
 
     public JSONObject getJSON() {
@@ -94,8 +115,14 @@ public class Room implements Serializable {
         res.put("review", this.rating);
         res.put("num_of_reviews", this.rating_count);
         res.put("id", this.id);
-        ArrayList<Integer> days = new ArrayList<>(available_days);
-        res.put("available_dates", days);
+        String ranges_str = (new ArrayList<>(available_days.asDescendingSetOfRanges())).toString();
+        JSONParser parser = new JSONParser();
+
+        try {
+            res.put("available_dates", (JSONArray) parser.parse(ranges_str));
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
 
         return res;
     }
