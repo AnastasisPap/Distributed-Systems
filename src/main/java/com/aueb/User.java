@@ -71,6 +71,7 @@ public class User {
     ---------------------------- FILTERING ----------------------------
      */
 
+    // Show prompt for the user to select filters and show results once read from the Master
     private void filterRooms(DataOutputStream out) throws Exception {
         JSONObject json_obj = Utils.createJSONObject("filter_rooms");
         JSONObject filter = new JSONObject();
@@ -174,6 +175,7 @@ public class User {
     ---------------------------- RATING ----------------------------
      */
 
+    // Ask the user to give the Room ID and a rating in 1-5 and send it to the Master
     private void rateRoom(DataOutputStream out) {
         System.out.println("Enter room ID");
         int id = in.nextInt();
@@ -196,6 +198,7 @@ public class User {
     ---------------------------- BOOK ----------------------------
      */
 
+    // Ask the user to provide the Room ID and a date range to book a room and send the request to the Master
     private void bookRoom(DataOutputStream out) {
         System.out.println("Enter room ID");
         int id = in.nextInt();
@@ -227,6 +230,7 @@ public class User {
     ---------------------------- ADD ROOMS ----------------------------
      */
 
+    // Ask the user to provide information about the room (doesn't include availability dates)
     private void addRoom(DataOutputStream out) throws IOException {
         in.nextLine();
         while (true) {
@@ -238,6 +242,7 @@ public class User {
         }
     }
 
+    // Instead of asking the user to provide through prompting, ask the user to provide information in a JSON file
     private void initializeFromConfig(DataOutputStream out) throws IOException, ParseException {
         in.nextLine();
         System.out.println("Give full path to json file: ");
@@ -252,6 +257,7 @@ public class User {
         }
     }
 
+    // Send the room information to the Master as a JSON file
     private void sendRoom(DataOutputStream out, Room room) throws IOException {
         JSONObject json_obj = Utils.createJSONObject("add_room");
         json_obj.put("room", room.getJSON());
@@ -263,6 +269,8 @@ public class User {
     ---------------------------- ADD DATES ----------------------------
      */
 
+    // Ask the manager to provide date availabilities for a room
+    // each time a date range is typed, it's instantly sent to the Master
     private void addAvailability(DataOutputStream out) {
         in.nextLine();
         String input = "";
@@ -288,6 +296,7 @@ public class User {
         }
     }
 
+    // Check if the input is correct and format it as JSON
     private JSONArray handleDateRange(String input) throws Exception {
         String[] dates = input.split("-");
         if (dates.length != 2) throw new Exception("Wrong format");
@@ -300,6 +309,7 @@ public class User {
         return (JSONArray) parser.parse("[" + date_start + "," + date_end + "]");
     }
 
+    // Sends the task to the Master and waits for the response
     private String makeRequest(DataOutputStream out, String request) throws IOException {
         out.writeUTF(request);
 

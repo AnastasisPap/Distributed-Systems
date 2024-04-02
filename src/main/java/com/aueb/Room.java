@@ -11,7 +11,6 @@ import org.json.simple.parser.ParseException;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Map;
 
 public class Room implements Serializable {
     public final String room_name;
@@ -23,6 +22,7 @@ public class Room implements Serializable {
     public float rating;
     public RangeSet<Integer> available_days = TreeRangeSet.create();
 
+    // Construct a Room object directly from JSON
     public Room(JSONObject json_obj)
     {
         this.room_name = json_obj.get("room_name").toString();
@@ -60,6 +60,8 @@ public class Room implements Serializable {
         this.rating_count++;
     }
 
+    // Returns true if it satisfies all the filters provided in the JSON Object
+    // Input: JSON Object that contains the filters. Each key is an attribute of the Room (e.g. room_name, area, price,...)
     public boolean satisfiesConditions(JSONObject filter) {
         if (filter.containsKey("area") && !filter.get("area").toString().equals(this.area)) return false;
         if (filter.containsKey("rating") && Float.parseFloat(filter.get("rating").toString()) < this.rating) return false;
@@ -89,9 +91,16 @@ public class Room implements Serializable {
         return true;
     }
 
+    // Adds date range in the available dates
+    // Input: Range object
     public void addDateRange(Range<Integer> date_range) {
         available_days.add(date_range);
 
+        // The .add() function "unions" the range and the current available date ranges,
+        // For example: [1, 5].add([7, 9]) = {[1, 5], [7, 9]}, [1, 5].add([4, 9]) = {[1, 9]}
+        // But if we have [1, 5].add([6, 9]) then we have {[1, 5], [6, 9]} instead of [1, 9]
+        // Solution: we order ranges and check if one range ends 1 day before the start of the next range (e.g. one
+        // ends in 5 the next starts at 6) then we want to merge them
         ArrayList<Range<Integer>> ranges_list = new ArrayList<>(available_days.asDescendingSetOfRanges());
         for (int i = 1; i < ranges_list.size(); i++) {
             Range<Integer> prev = ranges_list.get(i);
@@ -111,6 +120,7 @@ public class Room implements Serializable {
     public String getAvailableDates() {
         String dates_str = "";
         for (Range<Integer> date_range : available_days.asRanges()) {
+            // Convert epochs (i.e. how many days since a specific point which is an int) to a Date
             LocalDate start_date = LocalDate.ofEpochDay(date_range.lowerEndpoint());
             LocalDate end_date = LocalDate.ofEpochDay(date_range.upperEndpoint());
             dates_str += start_date + " to " + end_date + ",";
@@ -119,6 +129,8 @@ public class Room implements Serializable {
         return dates_str;
     }
 
+    // Input: JSON array with the first time = start date and second item = end date
+    // Output: true if the room can be booked, false otherwise
     public boolean book(JSONArray date_range_json) {
         int start_date = Integer.parseInt(date_range_json.get(0).toString());
         int end_date = Integer.parseInt(date_range_json.get(1).toString());
@@ -129,6 +141,7 @@ public class Room implements Serializable {
         return true;
     }
 
+    // Converts Room object to JSON
     public JSONObject getJSON() {
         JSONObject res = new JSONObject();
         res.put("room_name", this.room_name);
