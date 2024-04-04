@@ -1,5 +1,6 @@
 package com.aueb;
 
+import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -21,6 +22,7 @@ public class Room implements Serializable {
     public int rating_count;
     public float rating;
     public RangeSet<Integer> available_days = TreeRangeSet.create();
+    public RangeSet<Integer> bookings = TreeRangeSet.create();
 
     // Construct a Room object directly from JSON
     public Room(JSONObject json_obj)
@@ -55,38 +57,15 @@ public class Room implements Serializable {
         this.rating_count = 0;
     }
 
-    public void rateRoom(float rating) {
-        this.rating = (this.rating * this.rating_count + rating) / (this.rating_count + 1);
-        this.rating_count++;
-    }
-
     // Returns true if it satisfies all the filters provided in the JSON Object
     // Input: JSON Object that contains the filters. Each key is an attribute of the Room (e.g. room_name, area, price,...)
-    public boolean satisfiesConditions(JSONObject filter) {
-        if (filter.containsKey("area") && !filter.get("area").toString().equals(this.area)) return false;
-        if (filter.containsKey("rating") && Float.parseFloat(filter.get("rating").toString()) < this.rating) return false;
-        if (filter.containsKey("price")) {
-            JSONObject price = (JSONObject) filter.get("price");
-
-            if (this.price < Float.parseFloat(price.get("min_price").toString()) ||
-                this.price > Float.parseFloat(price.get("max_price").toString())) return false;
-        }
-        if (filter.containsKey("capacity")) {
-            JSONObject capacity = (JSONObject) filter.get("capacity");
-
-            if (this.num_of_people < Integer.parseInt(capacity.get("min_cap").toString()) ||
-                this.num_of_people > Integer.parseInt(capacity.get("max_cap").toString())) return false;
-        }
-        if (filter.containsKey("dates")) {
-            JSONArray dates = (JSONArray) filter.get("dates");
-
-            for (Object date_range_obj : dates) {
-                JSONArray date_range = (JSONArray) date_range_obj;
-                int start_date = Integer.parseInt(date_range.get(0).toString());
-                int end_date = Integer.parseInt(date_range.get(1).toString());
-                if (!available_days.encloses(Range.closed(start_date, end_date))) return false;
-            }
-        }
+    public boolean satisfiesConditions(RoomFilters filter) {
+        if (filter.area != null && !filter.area.equals(this.area)) return false;
+        if (filter.room_name != null && !filter.room_name.equals(this.room_name)) return false;
+        if (filter.rating != null && this.rating < filter.rating) return false;
+        if (filter.price != null && !filter.price.contains(this.price)) return false;
+        if (filter.num_of_people != null && !filter.num_of_people.contains(this.num_of_people)) return false;
+        if (filter.date_range != null && !this.available_days.encloses(filter.date_range)) return false;
 
         return true;
     }
@@ -95,13 +74,17 @@ public class Room implements Serializable {
     // Input: Range object
     public void addDateRange(Range<Integer> date_range) {
         available_days.add(date_range);
+        mergeSets();
+    }
 
+    private void mergeSets() {
         // The .add() function "unions" the range and the current available date ranges,
         // For example: [1, 5].add([7, 9]) = {[1, 5], [7, 9]}, [1, 5].add([4, 9]) = {[1, 9]}
         // But if we have [1, 5].add([6, 9]) then we have {[1, 5], [6, 9]} instead of [1, 9]
         // Solution: we order ranges and check if one range ends 1 day before the start of the next range (e.g. one
         // ends in 5 the next starts at 6) then we want to merge them
         ArrayList<Range<Integer>> ranges_list = new ArrayList<>(available_days.asDescendingSetOfRanges());
+        System.out.println(ranges_list);
         for (int i = 1; i < ranges_list.size(); i++) {
             Range<Integer> prev = ranges_list.get(i);
             Range<Integer> curr = ranges_list.get(i-1);
@@ -110,16 +93,22 @@ public class Room implements Serializable {
         }
     }
 
-    public void addRange(JSONArray date_range) {
-        int start = Integer.parseInt(date_range.getFirst().toString());
-        int end = Integer.parseInt(date_range.getLast().toString());
-        Range<Integer> date = Range.closed(start, end);
-        addDateRange(date);
+    public void addMultipleRanges(RangeSet<Integer> dates) {
+        available_days.addAll(dates);
+        mergeSets();
     }
 
     public String getAvailableDates() {
+        return convertToDatesString(this.available_days);
+    }
+
+    public String getBookings() {
+        return convertToDatesString(this.bookings);
+    }
+
+    private String convertToDatesString(RangeSet<Integer> dates) {
         String dates_str = "";
-        for (Range<Integer> date_range : available_days.asRanges()) {
+        for (Range<Integer> date_range : dates.asRanges()) {
             // Convert epochs (i.e. how many days since a specific point which is an int) to a Date
             LocalDate start_date = LocalDate.ofEpochDay(date_range.lowerEndpoint());
             LocalDate end_date = LocalDate.ofEpochDay(date_range.upperEndpoint());
@@ -131,13 +120,13 @@ public class Room implements Serializable {
 
     // Input: JSON array with the first time = start date and second item = end date
     // Output: true if the room can be booked, false otherwise
-    public boolean book(JSONArray date_range_json) {
-        int start_date = Integer.parseInt(date_range_json.get(0).toString());
-        int end_date = Integer.parseInt(date_range_json.get(1).toString());
+    public boolean book(Range<Integer> date) {
+        if (!available_days.encloses(date)) return false;
 
-        if (!available_days.encloses(Range.closed(start_date, end_date))) return false;
+        Range<Integer> date_to_remove = Range.open(date.lowerEndpoint() - 1, date.upperEndpoint() + 1);
+        this.available_days.remove(date_to_remove);
+        this.bookings.add(date);
 
-        this.available_days.remove(Range.closed(start_date-1, end_date+1));
         return true;
     }
 
@@ -151,14 +140,7 @@ public class Room implements Serializable {
         res.put("review", this.rating);
         res.put("num_of_reviews", this.rating_count);
         res.put("id", this.id);
-        String ranges_str = (new ArrayList<>(available_days.asDescendingSetOfRanges())).toString().replace("..", ",");
-        JSONParser parser = new JSONParser();
-
-        try {
-            res.put("available_dates", (JSONArray) parser.parse(ranges_str));
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
+        res.put("available_dates", available_days);
 
         return res;
     }
@@ -166,5 +148,14 @@ public class Room implements Serializable {
     @Override
     public String toString() {
         return this.getJSON().toString();
+    }
+
+    public static class RoomFilters implements Serializable {
+        public String room_name;
+        public String area;
+        public Range<Float> price;
+        public Range<Integer> num_of_people;
+        public Float rating;
+        public Range<Integer> date_range;
     }
 }
