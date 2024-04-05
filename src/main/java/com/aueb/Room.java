@@ -1,6 +1,5 @@
 package com.aueb;
 
-import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -36,12 +35,8 @@ public class Room implements Serializable {
         this.id = Integer.parseInt(json_obj.get("id").toString());
         JSONArray dates = (JSONArray) json_obj.get("available_dates");
 
-        for (Object date_obj : dates) {
-            JSONArray date_range = (JSONArray) date_obj;
-            int start = Integer.parseInt(date_range.getFirst().toString());
-            int end = Integer.parseInt(date_range.getLast().toString());
-            addDateRange(Range.closed(start, end));
-        }
+        for (Object date_obj : dates)
+            addDateRange(Utils.stringToRange(date_obj.toString()));
     }
 
     // Dates should be in the form of DD/MM/YYYY (e.g. 25/10/2022)
@@ -84,7 +79,6 @@ public class Room implements Serializable {
         // Solution: we order ranges and check if one range ends 1 day before the start of the next range (e.g. one
         // ends in 5 the next starts at 6) then we want to merge them
         ArrayList<Range<Integer>> ranges_list = new ArrayList<>(available_days.asDescendingSetOfRanges());
-        System.out.println(ranges_list);
         for (int i = 1; i < ranges_list.size(); i++) {
             Range<Integer> prev = ranges_list.get(i);
             Range<Integer> curr = ranges_list.get(i-1);

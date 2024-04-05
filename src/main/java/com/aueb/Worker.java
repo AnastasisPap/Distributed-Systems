@@ -12,10 +12,12 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Worker extends Thread {
-    private final ArrayList<Room> rooms = new ArrayList<>();
+    private final HashMap<Integer, ArrayList<Room>> rooms_map = new HashMap<>();
     private ServerSocket socket;
     private Socket connection;
     public int PORT;
@@ -48,11 +50,11 @@ public class Worker extends Thread {
             ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
             RequestPayload request = (RequestPayload) in.readObject();
             ResponsePayload res = new ResponsePayload();
-            if (request.function.equals("add_room")) {
+            if (request.function.equals("add_rooms")) {
                 res = addRoom(request);
                 System.out.println(res);
             }
-            else if (request.function.equals("show_rooms")) showRooms(request.mapId);
+            else if (request.function.equals("show_rooms")) showRooms(request);
             else if (request.function.equals("add_availability")) {
                 res = addAvailability(request);
                 System.out.println(res);
@@ -62,7 +64,7 @@ public class Worker extends Thread {
                 System.out.println(res);
             }
             else if (request.function.equals("filter_rooms")) filterRooms(request);
-            else if (request.function.equals("show_bookings")) showBookings(request.mapId);
+            else if (request.function.equals("show_bookings")) showBookings(request);
 
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
@@ -72,24 +74,27 @@ public class Worker extends Thread {
     private ResponsePayload bookRoom(RequestPayload request) {
         ResponsePayload res = new ResponsePayload();
 
-        for (Room room : rooms) {
-            if (room.id == request.id) {
-                Range<Integer> date = (Range<Integer>) request.data;
-                boolean booked = room.book(date);
-                if (!booked) res.output_response = "The date you provided isn't available. Available dates: \n" + room.getAvailableDates();
-                else res.output_response = "Successfully booked room.";
-                return res;
+        boolean booked_room = false;
+        for (Map.Entry<Integer, ArrayList<Room>> entry : rooms_map.entrySet()) {
+            for (Room room : entry.getValue()) {
+                if (room.id == request.room_id) {
+                    Range<Integer> date = (Range<Integer>) request.data;
+                    boolean booked = room.book(date);
+                    if (booked) booked_room = true; break;
+                }
             }
-        }
+            if (booked_room) break;
+        };
 
-        res.output_response = "Couldn't find a room with that ID";
+        if (booked_room) res.output_response = "Successfully Booked Room";
+        else res.output_response = "Failed to Book Room";
         return res;
     }
 
     private ResponsePayload addAvailability(RequestPayload request) {
         ResponsePayload res = new ResponsePayload();
-        for (Room room : rooms) {
-            if (room.id == request.id) {
+        for (Room room : rooms_map.get(request.user_id)) {
+            if (room.id == request.room_id) {
                 RangeSet<Integer> dates = (RangeSet<Integer>) request.data;
                 room.addMultipleRanges(dates);
                 res.output_response = "All available days:\n" + room.getAvailableDates();
@@ -104,9 +109,12 @@ public class Worker extends Thread {
 
     private ResponsePayload addRoom(RequestPayload request) {
         ResponsePayload res = new ResponsePayload();
+        if (!rooms_map.containsKey(request.user_id)) rooms_map.put(request.user_id, new ArrayList<>());
+
         try {
-            rooms.add((Room) request.data);
-            res.output_response = "Successfully added room with ID " + request.id;
+            rooms_map.get(request.user_id).add((Room) request.data);
+            res.output_response = "Successfully added room with ID " + request.room_id;
+            System.out.println(rooms_map);
         } catch (Exception e) {
             res.output_response = "Error: " + e.getLocalizedMessage();
         }
@@ -114,20 +122,21 @@ public class Worker extends Thread {
         return res;
     }
 
-    private void showRooms(int mapId) throws IOException {
+    private void showRooms(RequestPayload request) throws IOException {
         ResponsePayload res = new ResponsePayload();
-        res.output_response = "Found " + rooms.size() + " rooms.";
-        res.rooms_response.addAll(rooms);
-        res.mapId = mapId;
+        for (Map.Entry<Integer, ArrayList<Room>> entry : rooms_map.entrySet()) {
+            res.rooms_response.addAll(entry.getValue());
+        }
+        res.map_id = request.map_id;
 
         sendToReducer(res);
     }
 
-    private void showBookings(int mapId) throws IOException {
+    private void showBookings(RequestPayload request) throws IOException {
         ResponsePayload res = new ResponsePayload();
-        res.mapId = mapId;
+        res.map_id = request.map_id;
         String output_str = "";
-        for (Room room : rooms)
+        for (Room room : rooms_map.get(request.user_id))
             if (!room.bookings.isEmpty())
                 output_str += "Room with ID=" + room.id + " has bookings on: " + room.getBookings() + "\n";
 
@@ -144,14 +153,16 @@ public class Worker extends Thread {
 
     private void filterRooms(RequestPayload request) throws IOException {
         ResponsePayload res = new ResponsePayload();
-        res.mapId = request.mapId;
+        res.map_id = request.map_id;
         Room.RoomFilters filters = (Room.RoomFilters) request.data;
 
         int i = 0;
-        for (Room room : rooms) {
-            if (room.satisfiesConditions(filters)) {
-                res.rooms_response.add(room);
-                i++;
+        for (Map.Entry<Integer, ArrayList<Room>> entry : rooms_map.entrySet()) {
+            for (Room room : entry.getValue()) {
+                if (room.satisfiesConditions(filters)) {
+                    res.rooms_response.add(room);
+                    i++;
+                }
             }
         }
         res.output_response = "Found " + i + " rooms satisfying filters.";

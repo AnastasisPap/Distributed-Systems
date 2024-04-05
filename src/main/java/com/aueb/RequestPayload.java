@@ -5,11 +5,12 @@ import java.io.Serializable;
 public class RequestPayload implements Serializable {
     public String function;
     public Object data;
-    public Integer id;
-    public int mapId;
+    public Integer room_id;
+    public Integer user_id;
+    public int map_id;
 
     @Override
     public String toString() {
-        return "MapID: " + mapId + "\nFunction: " + function + "\nID: " + id + "\nData: " + data;
+        return "User ID: " + user_id + "\nMap ID: " + map_id + "\nFunction: " + function + "\nRoom ID: " + room_id + "\nData: " + data;
     }
 }

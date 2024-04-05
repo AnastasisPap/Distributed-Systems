@@ -48,17 +48,17 @@ public class Reducer {
                     try {
                         ObjectInputStream in = new ObjectInputStream(worker.getInputStream());
                         ResponsePayload res = (ResponsePayload) in.readObject();
-                        if (!results_map.containsKey(res.mapId)) {
-                            results_map.put(res.mapId, new ArrayList<>());
+                        if (!results_map.containsKey(res.map_id)) {
+                            results_map.put(res.map_id, new ArrayList<>());
                         }
 
                         if (!res.rooms_response.isEmpty()) {
                             synchronized (results_map) {
-                                results_map.get(res.mapId).addAll(res.rooms_response);
+                                results_map.get(res.map_id).addAll(res.rooms_response);
                             }
                         } else if (res.output_response != null) {
                             synchronized (results_map) {
-                                results_map.get(res.mapId).add(res.output_response);
+                                results_map.get(res.map_id).add(res.output_response);
                             }
                         }
                         in.close();
@@ -72,10 +72,10 @@ public class Reducer {
 
             for (Thread thread : threads) thread.join();
 
-            System.out.println(results_map);
             Socket master_connection = new Socket("127.0.0.1", Master.PORT);
             ResponsePayload res = new ResponsePayload();
             res.reducer_response = results_map;
+            System.out.println(res);
 
             ObjectOutputStream out = new ObjectOutputStream(master_connection.getOutputStream());
             out.writeObject(res);

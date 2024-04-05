@@ -3,11 +3,15 @@ package com.aueb;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class User {
@@ -24,29 +28,33 @@ public class User {
         }
     }
 
-    private void addRoom() throws IOException {
-        while (true) {
-            System.out.println("Enter room name, area, number of people, price, and id (separated by \",\" in the same order). Type stop to exit");
-            String room_str = in.nextLine();
-            Room room = new Room(room_str);
-            RequestPayload request = new RequestPayload();
-            request.data = room;
-            request.function = "add_room";
-            request.id = room.id;
+    private RequestPayload addRooms() throws IOException, ParseException {
+        ArrayList<Room> rooms = new ArrayList<>();
+        RequestPayload request = new RequestPayload();
+        System.out.println("Enter config path");
+        String path = in.nextLine();
+        JSONParser parser = new JSONParser();
+        JSONArray rooms_json = (JSONArray) parser.parse(new FileReader(path));
 
-            cli_out.writeObject(request);
-            cli_out.flush();
+        for (Object room_obj : rooms_json) {
+            JSONObject room_json = (JSONObject) room_obj;
+            Room room = new Room(room_json);
+            rooms.add(room);
         }
+        request.function = "add_rooms";
+        request.data = rooms;
+
+        return request;
     }
 
-    private void showRooms() throws IOException {
+    private RequestPayload showRooms() {
         RequestPayload request = new RequestPayload();
         request.function = "show_rooms";
-        cli_out.writeObject(request);
-        cli_out.flush();
+
+        return request;
     }
 
-    private void addAvailability() throws IOException {
+    private RequestPayload addAvailability() {
         System.out.println("Enter room ID: ");
         int id = in.nextInt();
         in.nextLine();
@@ -63,11 +71,12 @@ public class User {
         RequestPayload request = new RequestPayload();
         request.function = "add_availability";
         request.data = dates;
-        request.id = id;
-        cli_out.writeObject(request);
+        request.room_id = id;
+
+        return request;
     }
 
-    private void bookRoom() throws IOException {
+    private RequestPayload bookRoom() {
         System.out.println("Enter room ID:");
         int id = in.nextInt();
         in.nextLine();
@@ -75,15 +84,14 @@ public class User {
         Range<Integer> dates = Utils.stringToRange(in.nextLine());
 
         RequestPayload request = new RequestPayload();
-        request.id = id;
+        request.room_id = id;
         request.function = "book_room";
         request.data = dates;
 
-        cli_out.writeObject(request);
-        cli_out.flush();
+        return request;
     }
 
-    private void filterRoom() throws IOException {
+    private RequestPayload filterRoom() {
         Room.RoomFilters filters = new Room.RoomFilters();
         boolean finished = false;
         while (!finished) {
@@ -132,32 +140,43 @@ public class User {
         RequestPayload request = new RequestPayload();
         request.function = "filter_rooms";
         request.data = filters;
-        cli_out.writeObject(request);
+
+        return request;
     }
 
-    private void showBookings() throws IOException {
+    private RequestPayload showBookings() {
         RequestPayload request = new RequestPayload();
         request.function = "show_bookings";
 
-        cli_out.writeObject(request);
-        cli_out.flush();
+        return request;
     }
 
-    private void selection() throws IOException, ClassNotFoundException {
+    private void selection() throws IOException, ClassNotFoundException, ParseException {
+        System.out.println("Type your ID: ");
+        int user_id = in.nextInt();
+        in.nextLine();
         System.out.println("Select the number to choose function: ");
         System.out.println("(1) Add rooms\n(2) Show rooms\n(3) Add availability to room\n(4) Book room\n(5) Filter room\n(6) Show bookings");
         int selection = in.nextInt();
         in.nextLine();
+        RequestPayload request = new RequestPayload();
         switch (selection) {
-            case 1: addRoom(); break;
-            case 2: showRooms(); break;
-            case 3: addAvailability(); break;
-            case 4: bookRoom(); break;
-            case 5: filterRoom(); break;
-            case 6: showBookings(); break;
+            case 1: request = addRooms(); break;
+            case 2: request = showRooms(); break;
+            case 3: request = addAvailability(); break;
+            case 4: request = bookRoom(); break;
+            case 5: request = filterRoom(); break;
+            case 6: request = showBookings(); break;
             default:
                 System.out.println("Wrong selection");
         }
+
+        request.user_id = user_id;
+        cli_out.writeObject(request);
+        cli_out.flush();
+
+        ObjectInputStream cli_in = new ObjectInputStream(master_socket.getInputStream());
+        System.out.println(cli_in.readObject());
     }
 
     public static void main(String[] args) {
@@ -168,6 +187,8 @@ public class User {
             throw new RuntimeException(e);
         } catch (ClassNotFoundException e) {
             System.out.println("Class not found: " + e);
+        } catch (ParseException e) {
+            System.out.println("Error parsing json file: " + e);
         }
     }
 }
