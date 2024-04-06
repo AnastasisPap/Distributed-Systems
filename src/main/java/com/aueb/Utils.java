@@ -13,6 +13,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 
 public class Utils {
+    // Converts String date range in the form of 10/10/2000-20/10/2000
+    // to a Range Object of integers. The lower bound is the epoch of the start date and the upper the epoch of the
+    // end date
     public static Range<Integer> stringToRange(String dates) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/M/yyyy");
         String[] dates_arr = dates.split("-");

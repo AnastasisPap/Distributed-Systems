@@ -38,18 +38,6 @@ public class Room implements Serializable {
             addDateRange(Utils.stringToRange(date_obj.toString()));
     }
 
-    // Dates should be in the form of DD/MM/YYYY (e.g. 25/10/2022)
-    public Room(String input) {
-        String[] items = input.split(",");
-        this.room_name = items[0];
-        this.area = items[1];
-        this.num_of_people = Integer.parseInt(items[2].trim());
-        this.price = Float.parseFloat(items[3].trim());
-        this.id = Integer.parseInt(items[4].trim());
-        this.rating = 0.0f;
-        this.rating_count = 0;
-    }
-
     // Returns true if it satisfies all the filters provided in the JSON Object
     // Input: JSON Object that contains the filters. Each key is an attribute of the Room (e.g. room_name, area, price,...)
     public boolean satisfiesConditions(RoomFilters filter) {
@@ -118,6 +106,7 @@ public class Room implements Serializable {
         return res;
     }
 
+    // hashCode() and equals() are used to find the worker idx and also used for the hashmap
     @Override
     public int hashCode() {
         return abs(room_name.hashCode());
