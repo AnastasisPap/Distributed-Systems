@@ -1,23 +1,23 @@
 [
   {
-    "room_name": "Big nice room 2",
+    "room_name": "Big nice room 3",
     "num_of_people": 10,
     "area": "Athens",
     "review": 4.5,
     "num_of_reviews": 1000,
     "room_image": "/usr/bin/images/room_name.png",
-    "id": 3,
+    "id": 5,
     "price": 10.1,
     "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
   },
   {
-    "room_name": "Cozy room 2",
+    "room_name": "Cozy room 3",
     "num_of_people": 2,
     "area": "Kiato",
     "review": 3,
     "num_of_reviews": 200,
     "room_image": "/usr/bin/images/room_name.png",
-    "id": 4,
+    "id": 6,
     "price": 10.1,
     "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
   }

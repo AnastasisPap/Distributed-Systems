@@ -1,49 +1,69 @@
 package com.aueb;
 
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
+import com.aueb.handlers.UserConnectionHandler;
+import com.aueb.packets.Packet;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Scanner;
+import java.util.HashMap;
 
-public class Master {
-    public static final int PORT = 9090;
-    private final JSONObject config;
+public class Master extends Thread {
+    public static int MASTER_PORT_USER = 9080;
+    public static int MASTER_PORT_REDUCER = 9090;
+    private final HashMap<Integer, ObjectOutputStream> out_map = new HashMap<>();
 
-    private void start() {
+    @Override
+    public void run() {
+        new Thread(this::handleUserConnection).start();
+        new Thread(this::handleReducerConnection).start();
+    }
+
+    private void handleUserConnection() {
+        int connection_cnt = 0;
+        System.out.println("[START UP] Master listening at " + MASTER_PORT_USER + " for users.");
+
         try {
-            int num_of_workers = Integer.parseInt(config.get("num_of_workers").toString());
-            int[] ports = new int[num_of_workers];
-            for (int i = 0; i < ports.length; i++)
-                ports[i] = Integer.parseInt(((JSONArray) config.get("worker_ports")).get(i).toString());
-
-            ServerSocket server = new ServerSocket(PORT);
-            System.out.println("[INFO] Master listening at " + PORT);
+            ServerSocket user_socket = new ServerSocket(MASTER_PORT_USER);
 
             while (true) {
-                Socket connection = server.accept();
+                Socket connection = user_socket.accept();
+                System.out.println("User with ID " + connection_cnt + " connected.");
+                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
 
-                Thread thread = new MasterTaskHandler(connection, ports);
-                thread.start();
+                synchronized (out_map) {
+                    out_map.put(connection_cnt, out);
+                }
+                UserConnectionHandler connection_handler = new UserConnectionHandler(in, connection_cnt);
+                connection_handler.start();
+                connection_cnt++;
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public Master() {
-        // System.out.println("Give the path to the config file: ");
-        // Scanner in = new Scanner(System.in);
-        // String path = in.nextLine();
-        String path = "/Users/anastasispap/IdeaProjects/Distributed-Systems/src/main/resources/config.json";
-        this.config = Utils.getConfig(path);
-    }
+    private void handleReducerConnection() {
+        try {
+            System.out.println("Master listening at " + MASTER_PORT_REDUCER + " for reducer.");
+            ServerSocket reducer_socket = new ServerSocket(MASTER_PORT_REDUCER);
 
-    public static void main(String[] args) {
-        Master master = new Master();
-        master.start();
+            while (true) {
+                Socket connection = reducer_socket.accept();
+                ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+
+                Packet res = (Packet) in.readObject();
+
+                synchronized (out_map) {
+                    if (out_map.containsKey(res.connection_id))
+                        out_map.get(res.connection_id).writeObject(res);
+                }
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -12,6 +12,8 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
+import static java.lang.Math.abs;
+
 public class Room implements Serializable {
     public final String room_name;
     public final String area;
@@ -151,5 +153,22 @@ public class Room implements Serializable {
         public Range<Integer> num_of_people;
         public Float rating;
         public Range<Integer> date_range;
+    }
+
+    @Override
+    public int hashCode() {
+        return abs(room_name.hashCode());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Room room) {
+            return room.id == this.id;
+        } else if (obj instanceof Integer) {
+            int id = Integer.parseInt(obj.toString());
+            return id == this.id;
+        } else {
+            return false;
+        }
     }
 }
