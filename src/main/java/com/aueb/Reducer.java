@@ -36,7 +36,7 @@ public class Reducer extends Thread {
     private void handleWorkerResponse(Packet res) {
         if (!connection_outputs.containsKey(res.connection_id)) connection_outputs.put(res.connection_id, new ArrayList<>());
 
-        connection_outputs.get(res.connection_id).add(res);
+        if (res.successful) connection_outputs.get(res.connection_id).add(res);
 
         int workers_left;
         synchronized (ServicesHandler.num_of_workers_per_connection) {

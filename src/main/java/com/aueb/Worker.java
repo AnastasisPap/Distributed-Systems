@@ -49,10 +49,24 @@ public class Worker extends Thread {
             case "add_rooms" -> addRooms(request);
             case "book_room" -> bookRoom(request);
             case "show_rooms" -> showRooms(request);
+            case "show_bookings" -> showBookings(request);
             default -> throw new RuntimeException("Invalid function");
         };
 
         sendResponseToReducer(response);
+    }
+
+    private Packet showBookings(Packet request) {
+        Packet response = new Packet(request);
+        String username = request.data.toString();
+        String bookings = "";
+
+        for (Room room : rooms.values())
+            bookings += room.getBookings(username);
+        response.data = bookings;
+        if (!bookings.isEmpty()) response.successful = true;
+
+        return response;
     }
 
     private Packet bookRoom(Packet request) {
@@ -61,9 +75,10 @@ public class Worker extends Thread {
         int room_id = (int) data[0];
         if (!rooms.containsKey(room_id)) res.output = "Couldn't find room";
         else {
-            boolean booked_room = rooms.get(room_id).book((Range<Integer>) data[1]);
+            boolean booked_room = rooms.get(room_id).book(data[2].toString(), (Range<Integer>) data[1]);
             if (booked_room) res.output = "Successfully booked room.";
             else res.output = "Couldn't book room for the given date.";
+            res.successful = true;
         }
 
         return res;
@@ -73,6 +88,7 @@ public class Worker extends Thread {
         Packet res = new Packet(request);
 
         res.data = new ArrayList<>(rooms.values());
+        if (!rooms.values().isEmpty()) res.successful = true;
         return res;
     }
 
@@ -83,6 +99,7 @@ public class Worker extends Thread {
             rooms.put(room.id, room);
 
         res.output = "Successfully added rooms\n";
+        res.successful = true;
         return res;
     }
 

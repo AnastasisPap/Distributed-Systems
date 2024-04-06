@@ -11,6 +11,7 @@ import org.json.simple.parser.ParseException;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import static java.lang.Math.abs;
 
@@ -23,7 +24,7 @@ public class Room implements Serializable {
     public int rating_count;
     public float rating;
     public RangeSet<Integer> available_days = TreeRangeSet.create();
-    public RangeSet<Integer> bookings = TreeRangeSet.create();
+    public HashMap<String, RangeSet<Integer>> bookings = new HashMap<>();
 
     // Construct a Room object directly from JSON
     public Room(JSONObject json_obj)
@@ -98,8 +99,9 @@ public class Room implements Serializable {
         return convertToDatesString(this.available_days);
     }
 
-    public String getBookings() {
-        return convertToDatesString(this.bookings);
+    public String getBookings(String username) {
+        if (!bookings.containsKey(username)) return "";
+        return bookings.get(username).toString();
     }
 
     private String convertToDatesString(RangeSet<Integer> dates) {
@@ -116,12 +118,15 @@ public class Room implements Serializable {
 
     // Input: JSON array with the first time = start date and second item = end date
     // Output: true if the room can be booked, false otherwise
-    public boolean book(Range<Integer> date) {
+    public boolean book(String username, Range<Integer> date) {
         if (!available_days.encloses(date)) return false;
 
         Range<Integer> date_to_remove = Range.open(date.lowerEndpoint() - 1, date.upperEndpoint() + 1);
         this.available_days.remove(date_to_remove);
-        this.bookings.add(date);
+
+        if (!bookings.containsKey(username)) bookings.put(username, TreeRangeSet.create());
+        bookings.get(username).add(date);
+        System.out.println(bookings);
 
         return true;
     }

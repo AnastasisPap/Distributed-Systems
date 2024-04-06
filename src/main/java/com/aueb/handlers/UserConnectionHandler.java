@@ -31,9 +31,10 @@ public class UserConnectionHandler extends Thread {
             request.connection_id = this.connection_id;
             request.function = user_request.requested_function;
             HashMap<Integer, Packet> packets_map = switch (request.function) {
-                case "add_rooms" -> handleAddRooms(user_request.data, request);
-                case "book_room" -> handleBookRoom(user_request.data, request);
-                case "show_rooms" -> handleShowRooms(user_request.data, request);
+                case "add_rooms" -> handleAddRooms(user_request, request);
+                case "book_room" -> handleBookRoom(user_request, request);
+                case "show_rooms" -> handleShowRooms(request);
+                case "show_bookings" -> handleShowBookings(user_request, request);
                 default -> throw new RuntimeException("Can't find function: " + request.function);
             };
 
@@ -67,7 +68,20 @@ public class UserConnectionHandler extends Thread {
         }
     }
 
-    private HashMap<Integer, Packet> handleShowRooms(JSONObject data, Packet request) {
+    private HashMap<Integer, Packet> handleShowBookings(UserRequest user_request, Packet packet) {
+        HashMap<Integer, Packet> packets_map = new HashMap<>();
+        Packet request = new Packet(packet);
+        request.data = user_request.username;
+
+        int n = ServicesHandler.worker_ports.length;
+        for (int i = 0; i < n; i++) {
+            packets_map.put(ServicesHandler.worker_ports[i] % n, request);
+        }
+
+        return packets_map;
+    }
+
+    private HashMap<Integer, Packet> handleShowRooms(Packet request) {
         HashMap<Integer, Packet> idx_to_packet = new HashMap<>();
 
         int n = ServicesHandler.worker_ports.length;
@@ -77,13 +91,13 @@ public class UserConnectionHandler extends Thread {
         return idx_to_packet;
     }
 
-    private HashMap<Integer, Packet> handleBookRoom(JSONObject data, Packet request) {
+    private HashMap<Integer, Packet> handleBookRoom(UserRequest user_request, Packet request) {
         HashMap<Integer, Packet> idx_to_packet = new HashMap<>();
 
-        Range<Integer> date_range = Utils.stringToRange(data.get("date_range").toString());
-        int room_id = Integer.parseInt(data.get("room_id").toString());
+        Range<Integer> date_range = Utils.stringToRange(user_request.data.get("date_range").toString());
+        int room_id = Integer.parseInt(user_request.data.get("room_id").toString());
         Packet worker_request = new Packet(request);
-        worker_request.data = new Object[]{room_id, date_range};
+        worker_request.data = new Object[]{room_id, date_range, user_request.username};
 
         int n = ServicesHandler.worker_ports.length;
         for (int i = 0; i < n; i++)
@@ -92,8 +106,8 @@ public class UserConnectionHandler extends Thread {
         return idx_to_packet;
     }
 
-    private HashMap<Integer, Packet> handleAddRooms(JSONObject data, Packet request) {
-        JSONArray rooms_json = (JSONArray) data.get("rooms");
+    private HashMap<Integer, Packet> handleAddRooms(UserRequest userRequest, Packet request) {
+        JSONArray rooms_json = (JSONArray) userRequest.data.get("rooms");
         ArrayList<Room> rooms = new ArrayList<>();
 
         System.out.println(request);

@@ -7,6 +7,7 @@ public class Packet implements Serializable {
     public String function;
     public Object data;
     public String output;
+    public boolean successful = false;
 
     public Packet() {
     }
