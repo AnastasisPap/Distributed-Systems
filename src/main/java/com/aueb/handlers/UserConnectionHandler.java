@@ -17,15 +17,18 @@ import java.util.*;
 public class UserConnectionHandler extends Thread {
     private final ObjectInputStream in;
     private final int connection_id;
+    private final int n;
 
     public UserConnectionHandler(ObjectInputStream in, int connection_id) {
         this.connection_id = connection_id;
         this.in = in;
+        this.n = ServicesHandler.worker_ports.length;
     }
 
     @Override
     public void run() {
         try {
+            Thread.sleep(5000);
             UserRequest user_request = (UserRequest) in.readObject();
             Packet request = new Packet();
             request.connection_id = this.connection_id;
@@ -33,13 +36,14 @@ public class UserConnectionHandler extends Thread {
             HashMap<Integer, Packet> packets_map = switch (request.function) {
                 case "add_rooms" -> handleAddRooms(user_request, request);
                 case "book_room" -> handleBookRoom(user_request, request);
-                case "show_rooms" -> handleShowRooms(request);
+                case "show_rooms" -> sendToAll(request);
                 case "show_bookings" -> handleShowBookings(user_request, request);
+                case "filter" -> handleRoomsFilter(user_request, request);
                 default -> throw new RuntimeException("Can't find function: " + request.function);
             };
 
             sendToWorkers(request.connection_id, packets_map);
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
@@ -68,49 +72,42 @@ public class UserConnectionHandler extends Thread {
         }
     }
 
-    private HashMap<Integer, Packet> handleShowBookings(UserRequest user_request, Packet packet) {
+    private HashMap<Integer, Packet> sendToAll(Packet request) {
         HashMap<Integer, Packet> packets_map = new HashMap<>();
-        Packet request = new Packet(packet);
-        request.data = user_request.username;
 
-        int n = ServicesHandler.worker_ports.length;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
             packets_map.put(ServicesHandler.worker_ports[i] % n, request);
-        }
 
         return packets_map;
     }
 
-    private HashMap<Integer, Packet> handleShowRooms(Packet request) {
-        HashMap<Integer, Packet> idx_to_packet = new HashMap<>();
+    private HashMap<Integer, Packet> handleRoomsFilter(UserRequest user_request, Packet request) {
+        JSONObject filter_json = user_request.data;
+        request.data = new Room.RoomFilters(filter_json);
 
-        int n = ServicesHandler.worker_ports.length;
-        for (int i = 0; i < n; i++)
-            idx_to_packet.put(ServicesHandler.worker_ports[i] % n, request);
+        return sendToAll(request);
+    }
 
-        return idx_to_packet;
+    private HashMap<Integer, Packet> handleShowBookings(UserRequest user_request, Packet packet) {
+        Packet request = new Packet(packet);
+        request.data = user_request.username;
+
+        return sendToAll(request);
     }
 
     private HashMap<Integer, Packet> handleBookRoom(UserRequest user_request, Packet request) {
-        HashMap<Integer, Packet> idx_to_packet = new HashMap<>();
-
         Range<Integer> date_range = Utils.stringToRange(user_request.data.get("date_range").toString());
         int room_id = Integer.parseInt(user_request.data.get("room_id").toString());
         Packet worker_request = new Packet(request);
         worker_request.data = new Object[]{room_id, date_range, user_request.username};
 
-        int n = ServicesHandler.worker_ports.length;
-        for (int i = 0; i < n; i++)
-            idx_to_packet.put(ServicesHandler.worker_ports[i] % n, worker_request);
-
-        return idx_to_packet;
+        return sendToAll(worker_request);
     }
 
     private HashMap<Integer, Packet> handleAddRooms(UserRequest userRequest, Packet request) {
         JSONArray rooms_json = (JSONArray) userRequest.data.get("rooms");
         ArrayList<Room> rooms = new ArrayList<>();
 
-        System.out.println(request);
         for (Object room_json : rooms_json) {
             Room room = new Room((JSONObject) room_json);
             rooms.add(room);
@@ -119,7 +116,7 @@ public class UserConnectionHandler extends Thread {
         HashMap<Integer, Packet> packets_map = new HashMap<>();
 
         for (Room room : rooms) {
-            int idx = room.hashCode() % ServicesHandler.worker_ports.length;
+            int idx = room.hashCode() % n;
             if (!packets_map.containsKey(idx)) {
                 Packet packet = new Packet(request);
                 packet.data = new ArrayList<Room>();

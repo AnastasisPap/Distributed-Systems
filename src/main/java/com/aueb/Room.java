@@ -5,11 +5,8 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
 import java.io.Serializable;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -27,8 +24,7 @@ public class Room implements Serializable {
     public HashMap<String, RangeSet<Integer>> bookings = new HashMap<>();
 
     // Construct a Room object directly from JSON
-    public Room(JSONObject json_obj)
-    {
+    public Room(JSONObject json_obj) {
         this.room_name = json_obj.get("room_name").toString();
         this.num_of_people = Integer.parseInt(json_obj.get("num_of_people").toString());
         this.area = json_obj.get("area").toString();
@@ -43,8 +39,7 @@ public class Room implements Serializable {
     }
 
     // Dates should be in the form of DD/MM/YYYY (e.g. 25/10/2022)
-    public Room(String input)
-    {
+    public Room(String input) {
         String[] items = input.split(",");
         this.room_name = items[0];
         this.area = items[1];
@@ -58,14 +53,12 @@ public class Room implements Serializable {
     // Returns true if it satisfies all the filters provided in the JSON Object
     // Input: JSON Object that contains the filters. Each key is an attribute of the Room (e.g. room_name, area, price,...)
     public boolean satisfiesConditions(RoomFilters filter) {
-        if (filter.area != null && !filter.area.equals(this.area)) return false;
-        if (filter.room_name != null && !filter.room_name.equals(this.room_name)) return false;
+        if (filter.area != null && !filter.area.equalsIgnoreCase(this.area)) return false;
+        if (filter.room_name != null && !filter.room_name.equalsIgnoreCase(this.room_name)) return false;
         if (filter.rating != null && this.rating < filter.rating) return false;
         if (filter.price != null && !filter.price.contains(this.price)) return false;
-        if (filter.num_of_people != null && !filter.num_of_people.contains(this.num_of_people)) return false;
-        if (filter.date_range != null && !this.available_days.encloses(filter.date_range)) return false;
-
-        return true;
+        if (filter.num_of_people != null && this.num_of_people < filter.num_of_people) return false;
+        return filter.date_range == null || this.available_days.encloses(filter.date_range);
     }
 
     // Adds date range in the available dates
@@ -84,36 +77,15 @@ public class Room implements Serializable {
         ArrayList<Range<Integer>> ranges_list = new ArrayList<>(available_days.asDescendingSetOfRanges());
         for (int i = 1; i < ranges_list.size(); i++) {
             Range<Integer> prev = ranges_list.get(i);
-            Range<Integer> curr = ranges_list.get(i-1);
-            if (prev.upperEndpoint() == curr.lowerEndpoint()-1) available_days.add(Range.closed(
+            Range<Integer> curr = ranges_list.get(i - 1);
+            if (prev.upperEndpoint() == curr.lowerEndpoint() - 1) available_days.add(Range.closed(
                     prev.upperEndpoint(), curr.lowerEndpoint()));
         }
-    }
-
-    public void addMultipleRanges(RangeSet<Integer> dates) {
-        available_days.addAll(dates);
-        mergeSets();
-    }
-
-    public String getAvailableDates() {
-        return convertToDatesString(this.available_days);
     }
 
     public String getBookings(String username) {
         if (!bookings.containsKey(username)) return "";
         return bookings.get(username).toString();
-    }
-
-    private String convertToDatesString(RangeSet<Integer> dates) {
-        String dates_str = "";
-        for (Range<Integer> date_range : dates.asRanges()) {
-            // Convert epochs (i.e. how many days since a specific point which is an int) to a Date
-            LocalDate start_date = LocalDate.ofEpochDay(date_range.lowerEndpoint());
-            LocalDate end_date = LocalDate.ofEpochDay(date_range.upperEndpoint());
-            dates_str += start_date + " to " + end_date + ",";
-        }
-
-        return dates_str;
     }
 
     // Input: JSON array with the first time = start date and second item = end date
@@ -147,20 +119,6 @@ public class Room implements Serializable {
     }
 
     @Override
-    public String toString() {
-        return this.getJSON().toString();
-    }
-
-    public static class RoomFilters implements Serializable {
-        public String room_name;
-        public String area;
-        public Range<Float> price;
-        public Range<Integer> num_of_people;
-        public Float rating;
-        public Range<Integer> date_range;
-    }
-
-    @Override
     public int hashCode() {
         return abs(room_name.hashCode());
     }
@@ -174,6 +132,32 @@ public class Room implements Serializable {
             return id == this.id;
         } else {
             return false;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return this.getJSON().toString();
+    }
+
+    public static class RoomFilters implements Serializable {
+        public String room_name;
+        public String area;
+        public Range<Float> price;
+        public Integer num_of_people;
+        public Float rating;
+        public Range<Integer> date_range;
+
+        public RoomFilters(JSONObject json) {
+            if (json.containsKey("room_name")) room_name = json.get("room_name").toString();
+            if (json.containsKey("area")) area = json.get("area").toString();
+            if (json.containsKey("price")) {
+                JSONArray price_arr = (JSONArray) json.get("price");
+                price = Range.closed(Float.parseFloat(price_arr.get(0).toString()), Float.parseFloat(price_arr.get(1).toString()));
+            }
+            if (json.containsKey("num_of_people")) num_of_people = Integer.parseInt(json.get("num_of_people").toString());
+            if (json.containsKey("rating")) rating = Float.parseFloat(json.get("rating").toString());
+            if (json.containsKey("date_range")) date_range = Utils.stringToRange(json.get("date_range").toString());
         }
     }
 }

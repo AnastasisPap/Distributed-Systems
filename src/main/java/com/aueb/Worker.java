@@ -50,10 +50,28 @@ public class Worker extends Thread {
             case "book_room" -> bookRoom(request);
             case "show_rooms" -> showRooms(request);
             case "show_bookings" -> showBookings(request);
+            case "filter" -> filterRooms(request);
             default -> throw new RuntimeException("Invalid function");
         };
 
         sendResponseToReducer(response);
+    }
+
+    private synchronized ArrayList<Room> roomsToArray() {
+        return new ArrayList<>(rooms.values());
+    }
+
+    private Packet filterRooms(Packet request) {
+        ArrayList<Room> filtered_rooms = new ArrayList<>();
+        Packet response = new Packet(request);
+        Room.RoomFilters filters = (Room.RoomFilters) request.data;
+
+        for (Room room : roomsToArray())
+            if (room.satisfiesConditions(filters)) filtered_rooms.add(room);
+
+        response.data = filtered_rooms;
+        if (!filtered_rooms.isEmpty()) response.successful = true;
+        return response;
     }
 
     private Packet showBookings(Packet request) {
@@ -61,7 +79,7 @@ public class Worker extends Thread {
         String username = request.data.toString();
         String bookings = "";
 
-        for (Room room : rooms.values())
+        for (Room room : roomsToArray())
             bookings += room.getBookings(username);
         response.data = bookings;
         if (!bookings.isEmpty()) response.successful = true;
@@ -73,12 +91,16 @@ public class Worker extends Thread {
         Packet res = new Packet(request);
         Object[] data = (Object[]) request.data;
         int room_id = (int) data[0];
-        if (!rooms.containsKey(room_id)) res.output = "Couldn't find room";
-        else {
-            boolean booked_room = rooms.get(room_id).book(data[2].toString(), (Range<Integer>) data[1]);
-            if (booked_room) res.output = "Successfully booked room.";
-            else res.output = "Couldn't book room for the given date.";
-            res.successful = true;
+
+        synchronized (rooms) {
+            if (!rooms.containsKey(room_id)) res.output = "Couldn't find room";
+            else {
+                boolean booked_room;
+                booked_room = rooms.get(room_id).book(data[2].toString(), (Range<Integer>) data[1]);
+                if (booked_room) res.output = "Successfully booked room.";
+                else res.output = "Couldn't book room for the given date.";
+                res.successful = true;
+            }
         }
 
         return res;
@@ -87,8 +109,9 @@ public class Worker extends Thread {
     private Packet showRooms(Packet request) {
         Packet res = new Packet(request);
 
-        res.data = new ArrayList<>(rooms.values());
-        if (!rooms.values().isEmpty()) res.successful = true;
+        ArrayList<Room> arr = roomsToArray();
+        res.data = arr;
+        if (!arr.isEmpty()) res.successful = true;
         return res;
     }
 
@@ -96,7 +119,9 @@ public class Worker extends Thread {
         Packet res = new Packet(request);
 
         for (Room room : (ArrayList<Room>) request.data)
-            rooms.put(room.id, room);
+            synchronized (rooms) {
+                rooms.put(room.id, room);
+            }
 
         res.output = "Successfully added rooms\n";
         res.successful = true;

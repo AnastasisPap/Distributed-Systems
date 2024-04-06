@@ -34,9 +34,15 @@ public class Reducer extends Thread {
     }
 
     private void handleWorkerResponse(Packet res) {
-        if (!connection_outputs.containsKey(res.connection_id)) connection_outputs.put(res.connection_id, new ArrayList<>());
+        synchronized (connection_outputs) {
+            if (!connection_outputs.containsKey(res.connection_id)) {
+                connection_outputs.put(res.connection_id, new ArrayList<>());
+            }
 
-        if (res.successful) connection_outputs.get(res.connection_id).add(res);
+            if (res.successful) {
+                connection_outputs.get(res.connection_id).add(res);
+            }
+        }
 
         int workers_left;
         synchronized (ServicesHandler.num_of_workers_per_connection) {
@@ -52,7 +58,9 @@ public class Reducer extends Thread {
 
     private void sendToMaster(Packet packet) {
         Packet res = new Packet(packet);
-        res.output = connection_outputs.get(res.connection_id).toString();
+        synchronized (connection_outputs) {
+            res.output = connection_outputs.get(res.connection_id).toString();
+        }
 
         try {
             Socket master_connection = new Socket("127.0.0.1", Master.MASTER_PORT_REDUCER);
