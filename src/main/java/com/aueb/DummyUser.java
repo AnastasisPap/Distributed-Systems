@@ -47,8 +47,9 @@ public class DummyUser {
 
             // Keep connection open until the master returns a result
             ObjectInputStream user_in = new ObjectInputStream(master_socket.getInputStream());
-            Packet response = (Packet) user_in.readObject();
-            System.out.println(response.output);
+            JSONParser parser = new JSONParser();
+            JSONObject response = (JSONObject) parser.parse(user_in.readObject().toString());
+            System.out.println(response.get("data"));
 
             master_socket.close();
             user_in.close();

@@ -1,6 +1,10 @@
 package com.aueb.packets;
 
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
 import java.io.Serializable;
+import java.util.ArrayList;
 
 public class Packet implements Serializable {
     public int connection_id;
@@ -17,8 +21,17 @@ public class Packet implements Serializable {
         this.function = p.function;
     }
 
+    public JSONObject toJSON() {
+        JSONObject json = new JSONObject();
+        json.put("connection_id", connection_id);
+        json.put("function", function);
+        json.put("data", data);
+        json.put("output", output);
+        return json;
+    }
+
     @Override
     public String toString() {
-        return "[Packet]={ connection_id=" + connection_id + ", function=" + function + ", data=" + data + ", output=" + output + "}";
+        return toJSON().toString();
     }
 }

@@ -7,6 +7,8 @@ import com.aueb.Room;
 import com.google.common.collect.Range;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -33,7 +35,13 @@ public class UserConnectionHandler extends Thread {
     public void run() {
         try {
             // Read the user request that comes from the Dummy User
-            UserRequest user_request = (UserRequest) in.readObject();
+            JSONParser parser = new JSONParser();
+            Object obj = in.readObject();
+            UserRequest user_request;
+            if (obj instanceof UserRequest)
+                user_request = (UserRequest) obj;
+            else
+                user_request = new UserRequest((JSONObject) parser.parse(obj.toString()));
             Packet request = new Packet();
             request.connection_id = this.connection_id;
             request.function = user_request.requested_function;
@@ -41,7 +49,7 @@ public class UserConnectionHandler extends Thread {
                 Packets Hash Map:
                 Key: worker index
                 Value: Packet object that contains all the needed data that will be sent to the Worker
-             */
+            */
             // Route task based on the function
             HashMap<Integer, Packet> packets_map = switch (request.function) {
                 case "add_rooms" -> handleAddRooms(user_request, request);
@@ -54,7 +62,7 @@ public class UserConnectionHandler extends Thread {
 
             // Send the data to the worker(s)
             sendToWorkers(request.connection_id, packets_map);
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException | ParseException e) {
             throw new RuntimeException(e);
         }
     }
@@ -65,9 +73,7 @@ public class UserConnectionHandler extends Thread {
         for (Map.Entry<Integer, Packet> entry : packets_map.entrySet()) {
             // Start a new thread for each worker
             new Thread(() -> {
-                int worker_idx = entry.getKey();
                 Packet request = entry.getValue();
-                System.out.println("Sending " + request + " to worker with idx: " + worker_idx);
                 try {
                     Socket socket = new Socket("127.0.0.1", ServicesHandler.worker_ports[entry.getKey()]);
                     ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
@@ -124,7 +130,7 @@ public class UserConnectionHandler extends Thread {
     // We send it to all workers since we don't know which one holds the room with that ID.
     // We could only send it to one if the hashing was done based on room ID (or the booking was done based on room name)
     private HashMap<Integer, Packet> handleBookRoom(UserRequest user_request, Packet request) {
-        Range<Integer> date_range = Utils.stringToRange(user_request.data.get("date_range").toString());
+        Range<Long> date_range = Utils.stringToRange(user_request.data.get("date_range").toString());
         int room_id = Integer.parseInt(user_request.data.get("room_id").toString());
         Packet worker_request = new Packet(request);
         worker_request.data = new Object[]{room_id, date_range, user_request.username};

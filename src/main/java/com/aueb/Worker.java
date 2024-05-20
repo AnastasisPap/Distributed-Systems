@@ -114,9 +114,15 @@ public class Worker extends Thread {
             if (!rooms.containsKey(room_id)) res.output = "Couldn't find room";
             else {
                 boolean booked_room;
-                booked_room = rooms.get(room_id).book(data[2].toString(), (Range<Integer>) data[1]);
-                if (booked_room) res.output = "Successfully booked room.";
-                else res.output = "Couldn't book room for the given date.";
+                booked_room = rooms.get(room_id).book(data[2].toString(), (Range<Long>) data[1]);
+                if (booked_room) {
+                    res.output = "Successfully booked room.";
+                    System.out.println("Successfully booked room.");
+                } else {
+                    res.output = "Couldn't book room for the given date.";
+                    System.out.println("Couldn't book room for the given date.");
+                }
+                res.data = booked_room;
 
                 res.successful = true;
             }

@@ -71,7 +71,7 @@ public class Reducer extends Thread {
         // Use synchronized to get the newest result
         // We could possibly not include it as for that connection id, no more threads will be writing to the map
         synchronized (connection_outputs) {
-            res.output = connection_outputs.get(res.connection_id).toString();
+            res.data = connection_outputs.get(res.connection_id).toString();
         }
 
         try {

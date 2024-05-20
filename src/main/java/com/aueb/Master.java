@@ -66,8 +66,9 @@ public class Master extends Thread {
                 Packet res = (Packet) in.readObject();
 
                 // No need to use synchronized since only one thread writes at the map (no race condition)
-                if (out_map.containsKey(res.connection_id))
-                    out_map.get(res.connection_id).writeObject(res);
+                if (out_map.containsKey(res.connection_id)) {
+                    out_map.get(res.connection_id).writeObject(res.toString());
+                }
             }
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();

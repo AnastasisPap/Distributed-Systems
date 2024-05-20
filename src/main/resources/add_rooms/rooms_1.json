@@ -5,7 +5,7 @@
     "area": "Athens",
     "review": 4.5,
     "num_of_reviews": 1000,
-    "room_image": "/usr/bin/images/room_name.png",
+    "room_image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTkqnKj9ee7OEoD4LB6nfuT-AZJlLUZO0yRV-YaKVZpDA&s",
     "id": 1,
     "price": 10.1,
     "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
@@ -16,7 +16,7 @@
     "area": "Kiato",
     "review": 3,
     "num_of_reviews": 200,
-    "room_image": "/usr/bin/images/room_name.png",
+    "room_image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTSyTwOFA-fEfpwkzg4PMEbesBwFTCZWPNb4CvCo4mGwQ&s",
     "id": 2,
     "price": 10.1,
     "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
