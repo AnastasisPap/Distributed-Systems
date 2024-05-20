@@ -20,5 +20,49 @@
     "id": 2,
     "price": 10.1,
     "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
+  },
+  {
+    "room_name": "Big nice room 2",
+    "num_of_people": 10,
+    "area": "Athens",
+    "review": 4.5,
+    "num_of_reviews": 1000,
+    "room_image": "https://www.gazzetta.gr/sites/default/files/styles/amp_1200x900_4_3/public/2024-04/stark_arena_2.jpg?itok=TuMjDU_n",
+    "id": 3,
+    "price": 10.1,
+    "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
+  },
+  {
+    "room_name": "Cozy room 2",
+    "num_of_people": 2,
+    "area": "Kiato",
+    "review": 3,
+    "num_of_reviews": 200,
+    "room_image": "https://lh5.googleusercontent.com/p/AF1QipOl2ekZQmiduJONcam2xNQNpAC9ac0Gp7Ul_vbm",
+    "id": 4,
+    "price": 10.1,
+    "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
+  },
+  {
+    "room_name": "Big nice room 3",
+    "num_of_people": 10,
+    "area": "Athens",
+    "review": 4.5,
+    "num_of_reviews": 1000,
+    "room_image": "https://www.hok.com/wp-content/uploads/2019/05/FC-Barcelona-New-Palau-Blaugrana_Seating-Bowl_1900-1600x1069.jpg",
+    "id": 5,
+    "price": 10.1,
+    "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
+  },
+  {
+    "room_name": "Cozy room 3",
+    "num_of_people": 2,
+    "area": "Kiato",
+    "review": 3,
+    "num_of_reviews": 200,
+    "room_image": "https://www.fiba.basketball/images.fiba.com/Graphic/7/1/D/1/J9Xp4QWihU2xOOpRLuk9NA.png?v=20230710170938818",
+    "id": 6,
+    "price": 10.1,
+    "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
   }
 ]}

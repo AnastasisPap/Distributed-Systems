@@ -4,6 +4,7 @@ import com.aueb.Master;
 import com.aueb.Reducer;
 import com.aueb.Worker;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
@@ -20,6 +21,8 @@ public class ServicesHandler {
     // the number of workers becomes 0, the reducer stops receiving from workers, reduces the result,
     // and sends it to the master.
     public static HashMap<Integer, Integer> num_of_workers_per_connection = new HashMap<>();
+    // 0 backups = no extra nodes will be used
+    public static Integer numOfBackups = 0;
 
     /*
     Number of args: 1
@@ -30,21 +33,25 @@ public class ServicesHandler {
         new Master().start(); // Start the Master server
         new Reducer().start(); // Start the Reducer server
 
+        /*
         // Start each worker, listening on a specific port that is read from the config file
         for (int port : worker_ports) {
             Worker worker = new Worker(port);
             worker.start();
         }
+         */
     }
 
     // Input: path to config file
     // Output: int array with port numbers for the workers
-    private static int[] getWorkerPorts(String path) {
+    public static int[] getWorkerPorts(String path) {
         try {
             JSONParser parser = new JSONParser();
-            JSONArray ports_json = (JSONArray) parser.parse(new FileReader(path));
+            JSONObject data =  (JSONObject) parser.parse(new FileReader(path));
+            JSONArray ports_json = (JSONArray) data.get("worker_ports");
             int[] ports = new int[ports_json.size()];
             for (int i = 0; i < ports_json.size(); i++) ports[i] = Integer.parseInt(ports_json.get(i).toString());
+            numOfBackups = Integer.parseInt(data.get("num_of_backups").toString());
 
             return ports;
         } catch (IOException | ParseException e) {

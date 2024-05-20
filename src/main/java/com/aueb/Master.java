@@ -1,5 +1,6 @@
 package com.aueb;
 
+import com.aueb.handlers.ServicesHandler;
 import com.aueb.handlers.UserConnectionHandler;
 import com.aueb.packets.Packet;
 
@@ -11,6 +12,10 @@ import java.net.Socket;
 import java.util.HashMap;
 
 public class Master extends Thread {
+    public static void main(String[] args) {
+        new Master().start();
+    }
+
     public static int MASTER_PORT_USER = 5050; // Only dummy user will connect to this port
     public static int MASTER_PORT_REDUCER = 5060; // Only the reducer will connect to this port
     // Key: connection ID (similar to map ID)

@@ -13,6 +13,7 @@ import org.json.simple.parser.ParseException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 
@@ -70,6 +71,7 @@ public class UserConnectionHandler extends Thread {
     // Input: connection id which is similar to Map ID, packets map that maps worker idx to packet
     // Sends the object to the workers
     private void sendToWorkers(int connection_id, HashMap<Integer, Packet> packets_map) throws IOException {
+        System.out.println(packets_map);
         for (Map.Entry<Integer, Packet> entry : packets_map.entrySet()) {
             // Start a new thread for each worker
             new Thread(() -> {
@@ -82,7 +84,10 @@ public class UserConnectionHandler extends Thread {
                     out.close();
                     socket.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    int num_of_workers = ServicesHandler.num_of_workers_per_connection.get(connection_id);
+                    ServicesHandler.num_of_workers_per_connection.put(connection_id, num_of_workers - 1);
+                    System.out.println("Port " + ServicesHandler.worker_ports[entry.getKey()] +
+                            " isn't open or refused connection.");
                 }
             }).start();
         }
@@ -106,6 +111,19 @@ public class UserConnectionHandler extends Thread {
 
         return packets_map;
     }
+
+    private HashMap<Integer, Packet> sendToMainAndBackups(Packet request, int roomId) {
+        HashMap<Integer, Packet> packets_map = new HashMap<>();
+
+        // if numOfBackups > 0 (e.g. 1) then 2 iterations will happen:
+        //  - The first iteration is the main node
+        //  - The second iteration will be the backup node
+        for (int i = 0; i <= ServicesHandler.numOfBackups; i++)
+            packets_map.put((roomId + i) % n, request);
+
+        return packets_map;
+    }
+
 
     // Input: request from which we get the room filters as JSON
     // Output: hash map that contains all workers and the request contains the filtering
@@ -135,7 +153,7 @@ public class UserConnectionHandler extends Thread {
         Packet worker_request = new Packet(request);
         worker_request.data = new Object[]{room_id, date_range, user_request.username};
 
-        return sendToAll(worker_request);
+        return sendToMainAndBackups(worker_request, room_id);
     }
 
     // Input: request from which we get the room information as JSON
@@ -153,14 +171,16 @@ public class UserConnectionHandler extends Thread {
         HashMap<Integer, Packet> packets_map = new HashMap<>();
 
         for (Room room : rooms) {
-            int idx = room.hashCode() % n;
-            if (!packets_map.containsKey(idx)) {
-                Packet packet = new Packet(request);
-                packet.data = new ArrayList<Room>();
-                packets_map.put(idx, packet);
-            }
+            for (int i = 0; i <= ServicesHandler.numOfBackups; i++) {
+                int idx = (room.id + i) % n;
+                if (!packets_map.containsKey(idx)) {
+                    Packet packet = new Packet(request);
+                    packet.data = new ArrayList<Room>();
+                    packets_map.put(idx, packet);
+                }
 
-            ((ArrayList<Room>) packets_map.get(idx).data).add(room);
+                ((ArrayList<Room>) packets_map.get(idx).data).add(room);
+            }
         }
 
         return packets_map;

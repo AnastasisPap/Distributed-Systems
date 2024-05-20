@@ -12,6 +12,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Worker extends Thread {
+    public static void main(String[] args) {
+        int port = Integer.parseInt(args[0]);
+        Worker worker = new Worker(port);
+        worker.start();
+    }
+
     // Key: room ID
     // Value: Room object
     HashMap<Integer, Room> rooms = new HashMap<>();
@@ -123,9 +129,8 @@ public class Worker extends Thread {
                     System.out.println("Couldn't book room for the given date.");
                 }
                 res.data = booked_room;
-
-                res.successful = true;
             }
+            res.successful = true;
         }
 
         return res;

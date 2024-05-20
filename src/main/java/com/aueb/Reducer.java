@@ -12,6 +12,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Reducer extends Thread {
+    public static void main(String[] args) {
+        new Reducer().start();
+    }
+
     // Key: connection ID (similar to Map ID)
     // Value: list of packets (list because we append from each worker)
     private final HashMap<Integer, ArrayList<Packet>> connection_outputs = new HashMap<>();
