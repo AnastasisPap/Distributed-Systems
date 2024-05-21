@@ -1,6 +1,5 @@
 package com.aueb;
 
-import com.aueb.packets.Packet;
 import com.aueb.packets.UserRequest;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -28,30 +27,30 @@ public class DummyUser {
         user.sendUserRequest(args[0], args[1], path);
     }
 
-    public void sendUserRequest(String username, String function, String json_path) {
+    public void sendUserRequest(String username, String function, String jsonPath) {
         try {
             // Read the JSON data if provided
             JSONObject data = new JSONObject();
-            if (!json_path.isEmpty()) {
+            if (!jsonPath.isEmpty()) {
                 JSONParser parser = new JSONParser();
-                data = (JSONObject) parser.parse(new FileReader(json_path));
+                data = (JSONObject) parser.parse(new FileReader(jsonPath));
             }
 
             // Create User request object and send it to the master
-            UserRequest user_payload = new UserRequest(username, function, data);
+            UserRequest userPayload = new UserRequest(username, function, data);
 
-            Socket master_socket = new Socket("127.0.0.1", Master.MASTER_PORT_USER);
-            ObjectOutputStream user_out = new ObjectOutputStream(master_socket.getOutputStream());
-            user_out.writeObject(user_payload);
+            Socket masterSocket = new Socket("127.0.0.1", Master.MASTER_PORT_USER);
+            ObjectOutputStream user_out = new ObjectOutputStream(masterSocket.getOutputStream());
+            user_out.writeObject(userPayload);
             user_out.flush();
 
             // Keep connection open until the master returns a result
-            ObjectInputStream user_in = new ObjectInputStream(master_socket.getInputStream());
+            ObjectInputStream user_in = new ObjectInputStream(masterSocket.getInputStream());
             JSONParser parser = new JSONParser();
             JSONObject response = (JSONObject) parser.parse(user_in.readObject().toString());
             System.out.println(response.get("data"));
 
-            master_socket.close();
+            masterSocket.close();
             user_in.close();
             user_out.close();
         } catch (IOException | ParseException | ClassNotFoundException e) {

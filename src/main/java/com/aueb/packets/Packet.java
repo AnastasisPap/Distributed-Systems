@@ -1,13 +1,11 @@
 package com.aueb.packets;
 
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 
 public class Packet implements Serializable {
-    public int connection_id;
+    public int connectionId;
     public String function;
     public Object data;
     public String output;
@@ -17,13 +15,13 @@ public class Packet implements Serializable {
     }
 
     public Packet(Packet p) {
-        this.connection_id = p.connection_id;
+        this.connectionId = p.connectionId;
         this.function = p.function;
     }
 
     public JSONObject toJSON() {
         JSONObject json = new JSONObject();
-        json.put("connection_id", connection_id);
+        json.put("connection_id", connectionId);
         json.put("function", function);
         json.put("data", data);
         json.put("output", output);

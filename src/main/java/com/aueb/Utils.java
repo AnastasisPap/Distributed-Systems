@@ -20,12 +20,12 @@ public class Utils {
     // to a Range Object of integers. The lower bound is the epoch of the start date and the upper the epoch of the
     // end date
     public static Range<Long> stringToRange(String dates) {
-        String[] dates_arr = dates.split("-");
+        String[] datesArr = dates.split("-");
         DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.SHORT, Locale.FRANCE);
         Date startDate, endDate;
         try {
-            startDate = dateFormat.parse(dates_arr[0]);
-            endDate = dateFormat.parse(dates_arr[1]);
+            startDate = dateFormat.parse(datesArr[0]);
+            endDate = dateFormat.parse(datesArr[1]);
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }

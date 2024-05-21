@@ -18,7 +18,7 @@ public class Reducer extends Thread {
 
     // Key: connection ID (similar to Map ID)
     // Value: list of packets (list because we append from each worker)
-    private final HashMap<Integer, ArrayList<Packet>> connection_outputs = new HashMap<>();
+    private final HashMap<Integer, ArrayList<Packet>> connectionOutputs = new HashMap<>();
     public static int REDUCER_PORT = 6969; // Only workers connect to this port
 
     @Override
@@ -44,28 +44,28 @@ public class Reducer extends Thread {
     private void handleWorkerResponse(Packet res) {
         // We need to use synchronized since multiple threads can be writing at the map at the same time, which can
         // lead to race conditions (data loss/exception)
-        synchronized (connection_outputs) {
-            if (!connection_outputs.containsKey(res.connection_id)) {
-                connection_outputs.put(res.connection_id, new ArrayList<>());
+        synchronized (connectionOutputs) {
+            if (!connectionOutputs.containsKey(res.connectionId)) {
+                connectionOutputs.put(res.connectionId, new ArrayList<>());
             }
 
             // Only append the result if it's successfully (so it's meaningful)
             if (res.successful) {
-                connection_outputs.get(res.connection_id).add(res);
+                connectionOutputs.get(res.connectionId).add(res);
             }
         }
 
         // Use synchronized for the same reason as before
-        int workers_left;
-        synchronized (ServicesHandler.num_of_workers_per_connection) {
-            workers_left = ServicesHandler.num_of_workers_per_connection.get(res.connection_id);
-            workers_left--;
+        int workersLeft;
+        synchronized (ServicesHandler.numOfWorkersPerConnection) {
+            workersLeft = ServicesHandler.numOfWorkersPerConnection.get(res.connectionId);
+            workersLeft--;
             // For the current connection id, reduce the expecting number of workers by 1
-            ServicesHandler.num_of_workers_per_connection.put(res.connection_id, workers_left);
+            ServicesHandler.numOfWorkersPerConnection.put(res.connectionId, workersLeft);
         }
 
         // If no more workers are expected, send the results to the master
-        if (workers_left == 0) {
+        if (workersLeft == 0) {
             sendToMaster(res);
         }
     }
@@ -74,17 +74,17 @@ public class Reducer extends Thread {
         Packet res = new Packet(packet);
         // Use synchronized to get the newest result
         // We could possibly not include it as for that connection id, no more threads will be writing to the map
-        synchronized (connection_outputs) {
-            res.data = connection_outputs.get(res.connection_id).toString();
+        synchronized (connectionOutputs) {
+            res.data = connectionOutputs.get(res.connectionId).toString();
         }
 
         try {
-            Socket master_connection = new Socket("127.0.0.1", Master.MASTER_PORT_REDUCER);
-            ObjectOutputStream out = new ObjectOutputStream(master_connection.getOutputStream());
+            Socket masterConnection = new Socket("127.0.0.1", Master.MASTER_PORT_REDUCER);
+            ObjectOutputStream out = new ObjectOutputStream(masterConnection.getOutputStream());
             out.writeObject(res);
             out.flush();
             out.close();
-            master_connection.close();
+            masterConnection.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

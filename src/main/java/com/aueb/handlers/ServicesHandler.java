@@ -14,13 +14,13 @@ import java.util.HashMap;
 
 public class ServicesHandler {
     // Contains the worker ports, static because the Master, Worker and Reducer need to access it
-    public static int[] worker_ports;
+    public static int[] workerPorts;
     // Key: Connection ID
     // Value: Number of workers
     // This Hash Map is needed for the reducer to know how many workers to wait to get a result from. Once
     // the number of workers becomes 0, the reducer stops receiving from workers, reduces the result,
     // and sends it to the master.
-    public static HashMap<Integer, Integer> num_of_workers_per_connection = new HashMap<>();
+    public static HashMap<Integer, Integer> numOfWorkersPerConnection = new HashMap<>();
     // 0 backups = no extra nodes will be used
     public static Integer numOfBackups = 0;
 
@@ -29,7 +29,7 @@ public class ServicesHandler {
      - Path to the config file
      */
     public static void main(String[] args) {
-        worker_ports = getWorkerPorts(args[0]);
+        workerPorts = getWorkerPorts(args[0]);
         new Master().start(); // Start the Master server
         new Reducer().start(); // Start the Reducer server
 
@@ -48,9 +48,9 @@ public class ServicesHandler {
         try {
             JSONParser parser = new JSONParser();
             JSONObject data =  (JSONObject) parser.parse(new FileReader(path));
-            JSONArray ports_json = (JSONArray) data.get("worker_ports");
-            int[] ports = new int[ports_json.size()];
-            for (int i = 0; i < ports_json.size(); i++) ports[i] = Integer.parseInt(ports_json.get(i).toString());
+            JSONArray portsJSON = (JSONArray) data.get("worker_ports");
+            int[] ports = new int[portsJSON.size()];
+            for (int i = 0; i < portsJSON.size(); i++) ports[i] = Integer.parseInt(portsJSON.get(i).toString());
             numOfBackups = Integer.parseInt(data.get("num_of_backups").toString());
 
             return ports;
