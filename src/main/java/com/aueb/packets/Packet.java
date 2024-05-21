@@ -8,8 +8,6 @@ public class Packet implements Serializable {
     public int connectionId;
     public String function;
     public Object data;
-    public String output;
-    public boolean successful = false;
 
     public Packet() {
     }
@@ -24,12 +22,26 @@ public class Packet implements Serializable {
         json.put("connection_id", connectionId);
         json.put("function", function);
         json.put("data", data);
-        json.put("output", output);
         return json;
     }
 
     @Override
     public String toString() {
         return toJSON().toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (o == null || getClass() != o.getClass()) return false;
+        Packet packet = (Packet) o;
+        if (connectionId != packet.connectionId) return false;
+        return packet.data.equals(this.data);
+    }
+
+    @Override
+    public int hashCode() {
+        return data.toString().hashCode();
     }
 }

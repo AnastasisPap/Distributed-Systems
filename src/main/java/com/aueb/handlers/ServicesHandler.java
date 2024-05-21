@@ -33,13 +33,11 @@ public class ServicesHandler {
         new Master().start(); // Start the Master server
         new Reducer().start(); // Start the Reducer server
 
-        /*
         // Start each worker, listening on a specific port that is read from the config file
-        for (int port : worker_ports) {
+        for (int port : workerPorts) {
             Worker worker = new Worker(port);
             worker.start();
         }
-         */
     }
 
     // Input: path to config file

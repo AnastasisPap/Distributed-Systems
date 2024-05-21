@@ -84,8 +84,6 @@ public class Worker extends Thread {
             if (room.satisfiesConditions(filters)) filteredRooms.add(room);
 
         response.data = filteredRooms;
-        // If there are rooms to show from this worker, mark it for the reducer to include it in the results
-        if (!filteredRooms.isEmpty()) response.successful = true;
         return response;
     }
 
@@ -95,14 +93,13 @@ public class Worker extends Thread {
     private Packet showBookings(Packet request) {
         Packet response = new Packet(request);
         String username = request.data.toString();
-        String bookings = "";
+        ArrayList<String> bookings = new ArrayList<>();
 
-        for (Room room : roomsToArray())
-            bookings += room.getBookings(username);
+        for (Room room : roomsToArray()) {
+            String currBookings = room.getBookings(username);
+            if (!currBookings.isEmpty()) bookings.add(room.roomName + ": " + currBookings);
+        }
         response.data = bookings;
-
-        // Only mark as important if there are rooms to show
-        if (!bookings.isEmpty()) response.successful = true;
 
         return response;
     }
@@ -117,20 +114,18 @@ public class Worker extends Thread {
         // Use synchronized because the thread that adds the room might not have finished adding it yet if at race
         // condition
         synchronized (rooms) {
-            if (!rooms.containsKey(room_id)) res.output = "Couldn't find room";
+            if (!rooms.containsKey(room_id)) res.data = "Couldn't find room";
             else {
                 boolean bookedRoom;
                 bookedRoom = rooms.get(room_id).book(data[2].toString(), (Range<Long>) data[1]);
                 if (bookedRoom) {
-                    res.output = "Successfully booked room.";
+                    res.data = "Successfully booked room.";
                     System.out.println("Successfully booked room.");
                 } else {
-                    res.output = "Couldn't book room for the given date.";
+                    res.data = "Couldn't book room for the given date.";
                     System.out.println("Couldn't book room for the given date.");
                 }
-                res.data = bookedRoom;
             }
-            res.successful = true;
         }
 
         return res;
@@ -141,11 +136,8 @@ public class Worker extends Thread {
     private Packet showRooms(Packet request) {
         Packet res = new Packet(request);
 
-        ArrayList<Room> arr = roomsToArray();
-        res.data = arr;
+        res.data = roomsToArray();
 
-        // mark as important only if there are rooms to show
-        if (!arr.isEmpty()) res.successful = true;
         return res;
     }
 
@@ -160,8 +152,7 @@ public class Worker extends Thread {
                 rooms.put(room.id, room);
             }
 
-        res.output = "Successfully added rooms\n";
-        res.successful = true;
+        res.data = "Successfully added rooms";
         return res;
     }
 

@@ -31,4 +31,12 @@ public class Utils {
         }
         return Range.closed(startDate.getTime(), endDate.getTime());
     }
+
+    public static String dateRangeToString(Range<Long> range) {
+        DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.SHORT, Locale.FRANCE);
+
+        String startDate = dateFormat.format(range.lowerEndpoint());
+        String endDate = dateFormat.format(range.upperEndpoint());
+        return startDate + "-" + endDate;
+    }
 }

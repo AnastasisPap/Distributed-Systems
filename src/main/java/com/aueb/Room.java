@@ -74,7 +74,17 @@ public class Room implements Serializable {
 
     public String getBookings(String username) {
         if (!bookings.containsKey(username)) return "";
-        return bookings.get(username).toString();
+
+        ArrayList<String> bookingsList = new ArrayList<>();
+        for (Range<Long> range : bookings.get(username).asRanges())
+            bookingsList.add(Utils.dateRangeToString(range));
+
+        String res = "";
+        for (int i = 0; i < bookingsList.size(); i++) {
+            res += bookingsList.get(i);
+            if (i < bookingsList.size() - 1) res += ", ";
+        }
+        return res;
     }
 
     // Input: JSON array with the first time = start date and second item = end date
@@ -101,8 +111,12 @@ public class Room implements Serializable {
         res.put("review", this.rating);
         res.put("num_of_reviews", this.ratingCount);
         res.put("id", this.id);
-        res.put("available_dates", availableDays);
         res.put("room_image", this.imageURL);
+
+        JSONArray dates = new JSONArray();
+        for (Range<Long> range : availableDays.asRanges())
+            dates.add(Utils.dateRangeToString(range));
+        res.put("available_dates", dates);
 
         return res;
     }
