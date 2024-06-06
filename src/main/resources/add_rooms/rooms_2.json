@@ -6,7 +6,7 @@
     "review": 4.5,
     "num_of_reviews": 1000,
     "room_image": "https://www.gazzetta.gr/sites/default/files/styles/amp_1200x900_4_3/public/2024-04/stark_arena_2.jpg?itok=TuMjDU_n",
-    "id": 3,
+    "id": 1,
     "price": 10.1,
     "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
   },
@@ -17,7 +17,7 @@
     "review": 3,
     "num_of_reviews": 200,
     "room_image": "https://lh5.googleusercontent.com/p/AF1QipOl2ekZQmiduJONcam2xNQNpAC9ac0Gp7Ul_vbm",
-    "id": 4,
+    "id": 2,
     "price": 10.1,
     "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
   }

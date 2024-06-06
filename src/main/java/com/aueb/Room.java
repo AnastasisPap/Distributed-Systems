@@ -19,10 +19,12 @@ public class Room implements Serializable {
     public final float price;
     public final int id;
     public int ratingCount;
+    public boolean isBackup;
     public float rating;
     public final String imageURL;
     public RangeSet<Long> availableDays = TreeRangeSet.create();
     public HashMap<String, RangeSet<Long>> bookings = new HashMap<>();
+    public int portBackup;
 
     // Construct a Room object directly from JSON
     public Room(JSONObject json_obj) {
@@ -34,12 +36,30 @@ public class Room implements Serializable {
         this.ratingCount = Integer.parseInt(json_obj.get("num_of_reviews").toString());
         this.id = Integer.parseInt(json_obj.get("id").toString());
         this.imageURL = json_obj.get("room_image").toString();
+        if (json_obj.containsKey("is_backup"))
+            this.isBackup = Boolean.parseBoolean(json_obj.get("is_backup").toString());
+        if (json_obj.containsKey("is_backup"))
+            this.portBackup = Integer.parseInt(json_obj.get("port_backup").toString());
         JSONArray dates = (JSONArray) json_obj.get("available_dates");
 
         for (Object date_obj : dates)
             addDateRange(Utils.stringToRange(date_obj.toString()));
     }
 
+    public Room(Room room) {
+        this.roomName = room.roomName;
+        this.area = room.area;
+        this.numOfPeople = room.numOfPeople;
+        this.price = room.price;
+        this.id = room.id;
+        this.ratingCount = room.ratingCount;
+        this.isBackup = room.isBackup;
+        this.rating = room.rating;
+        this.imageURL = room.imageURL;
+        this.availableDays = room.availableDays;
+        this.bookings = room.bookings;
+        this.portBackup = room.portBackup;
+    }
     // Returns true if it satisfies all the filters provided in the JSON Object
     // Input: JSON Object that contains the filters. Each key is an attribute of the Room (e.g. room_name, area, price,...)
     public boolean satisfiesConditions(RoomFilters filter) {
@@ -112,6 +132,8 @@ public class Room implements Serializable {
         res.put("num_of_reviews", this.ratingCount);
         res.put("id", this.id);
         res.put("room_image", this.imageURL);
+        res.put("is_backup", this.isBackup);
+        res.put("port_backup", this.portBackup);
 
         JSONArray dates = new JSONArray();
         for (Range<Long> range : availableDays.asRanges())

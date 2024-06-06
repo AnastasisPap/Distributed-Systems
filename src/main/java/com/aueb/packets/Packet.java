@@ -3,11 +3,14 @@ package com.aueb.packets;
 import org.json.simple.JSONObject;
 
 import java.io.Serializable;
+import java.util.HashSet;
 
 public class Packet implements Serializable {
     public int connectionId;
     public String function;
     public Object data;
+    public boolean returnOutput = false;
+    public HashSet<Integer> failedWorkers = new HashSet<>();
 
     public Packet() {
     }
@@ -22,6 +25,7 @@ public class Packet implements Serializable {
         json.put("connection_id", connectionId);
         json.put("function", function);
         json.put("data", data);
+        json.put("return_output", returnOutput);
         return json;
     }
 

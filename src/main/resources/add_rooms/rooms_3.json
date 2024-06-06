@@ -9,16 +9,5 @@
     "id": 5,
     "price": 10.1,
     "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
-  },
-  {
-    "room_name": "Cozy room 3",
-    "num_of_people": 2,
-    "area": "Kiato",
-    "review": 3,
-    "num_of_reviews": 200,
-    "room_image": "https://www.fiba.basketball/images.fiba.com/Graphic/7/1/D/1/J9Xp4QWihU2xOOpRLuk9NA.png?v=20230710170938818",
-    "id": 6,
-    "price": 10.1,
-    "available_dates": ["1/1/2024-1/6/2024", "1/9/2024-1/1/2025"]
   }
 ]}

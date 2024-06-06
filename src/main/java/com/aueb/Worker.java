@@ -1,5 +1,6 @@
 package com.aueb;
 
+import com.aueb.handlers.ServicesHandler;
 import com.aueb.packets.Packet;
 import com.google.common.collect.Range;
 
@@ -15,6 +16,8 @@ public class Worker extends Thread {
     // Key: room ID
     // Value: Room object
     HashMap<Integer, Room> rooms = new HashMap<>();
+    HashMap<Integer, Room> backupRoomsPerID = new HashMap<>();
+    HashMap<Integer, ArrayList<Room>> backupRoomsPerPort = new HashMap<>();
     private final int port;
 
     public static void main(String[] args) {
@@ -65,12 +68,24 @@ public class Worker extends Thread {
             default -> throw new RuntimeException("Invalid function");
         };
 
-        sendResponseToReducer(response);
+        if (request.returnOutput) {
+            System.out.println("Worker " + port + " sending to reducer.");
+            sendResponseToReducer(response);
+        }
     }
 
     // We use synchronized to get the latest value as multiple threads could be updating the map
     private synchronized ArrayList<Room> roomsToArray() {
-        return new ArrayList<>(rooms.values());
+        ArrayList<Room> allRooms = new ArrayList<>(rooms.values());
+
+        for (int port : backupRoomsPerPort.keySet()) {
+            synchronized (ServicesHandler.failedWorkers) {
+                if (ServicesHandler.failedWorkers.contains(port))
+                    allRooms.addAll(backupRoomsPerPort.get(port));
+            }
+        }
+
+        return allRooms;
     }
 
     // The input packet contains a RoomFilters object
@@ -79,8 +94,14 @@ public class Worker extends Thread {
         ArrayList<Room> filteredRooms = new ArrayList<>();
         Packet response = new Packet(request);
         Room.RoomFilters filters = (Room.RoomFilters) request.data;
+        ArrayList<Room> roomsToFilter = new ArrayList<>(roomsToArray());
 
-        for (Room room : roomsToArray())
+        for (int port : backupRoomsPerPort.keySet()) {
+            if (request.failedWorkers.contains(port))
+                roomsToFilter.addAll(backupRoomsPerPort.get(port));
+        }
+
+        for (Room room : roomsToFilter)
             if (room.satisfiesConditions(filters)) filteredRooms.add(room);
 
         response.data = filteredRooms;
@@ -114,10 +135,13 @@ public class Worker extends Thread {
         // Use synchronized because the thread that adds the room might not have finished adding it yet if at race
         // condition
         synchronized (rooms) {
-            if (!rooms.containsKey(room_id)) res.data = "Couldn't find room";
+            if (!rooms.containsKey(room_id) && !backupRoomsPerID.containsKey(room_id)) res.data = "Couldn't find room";
             else {
                 boolean bookedRoom;
-                bookedRoom = rooms.get(room_id).book(data[2].toString(), (Range<Long>) data[1]);
+                if (rooms.containsKey(room_id))
+                    bookedRoom = rooms.get(room_id).book(data[2].toString(), (Range<Long>) data[1]);
+                else
+                    bookedRoom = backupRoomsPerID.get(room_id).book(data[2].toString(), (Range<Long>) data[1]);
                 if (bookedRoom) {
                     res.data = "Successfully booked room.";
                     System.out.println("Successfully booked room.");
@@ -146,11 +170,23 @@ public class Worker extends Thread {
     private Packet addRooms(Packet request) {
         Packet res = new Packet(request);
 
-        for (Room room : (ArrayList<Room>) request.data)
+        for (Room room : (ArrayList<Room>) request.data) {
             // use synchronized as multiple threads can be writing at the object at the same time
-            synchronized (rooms) {
-                rooms.put(room.id, room);
+            if (room.isBackup) {
+                synchronized (backupRoomsPerID) {
+                    backupRoomsPerID.put(room.id, room);
+                }
+                synchronized (backupRoomsPerPort) {
+                    int port = room.portBackup;
+                    if (!backupRoomsPerPort.containsKey(port)) backupRoomsPerPort.put(port, new ArrayList<>());
+                    backupRoomsPerPort.get(port).add(room);
+                }
+            } else {
+                synchronized (rooms) {
+                    rooms.put(room.id, room);
+                }
             }
+        }
 
         res.data = "Successfully added rooms";
         return res;
