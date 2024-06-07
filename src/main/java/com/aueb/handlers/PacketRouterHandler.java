@@ -28,7 +28,6 @@ public class PacketRouterHandler extends Thread {
             } catch (IOException e) {
                 i++;
                 request.failedWorkers.add(ServicesHandler.workerPorts[idx]);
-                System.out.println("Error, trying backup at port " + ServicesHandler.workerPorts[idx + 1]);
             }
         }
         if (i > numOfBackups) {
