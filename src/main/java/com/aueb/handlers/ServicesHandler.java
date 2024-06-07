@@ -22,7 +22,6 @@ public class ServicesHandler {
     // the number of workers becomes 0, the reducer stops receiving from workers, reduces the result,
     // and sends it to the master.
     public static HashMap<Integer, Integer> numOfWorkersPerConnection = new HashMap<>();
-    public static HashSet<Integer> failedWorkers = new HashSet<>();
     // 0 backups = no extra nodes will be used
     public static Integer numOfBackups = 0;
 

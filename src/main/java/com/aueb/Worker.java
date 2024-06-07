@@ -75,14 +75,12 @@ public class Worker extends Thread {
     }
 
     // We use synchronized to get the latest value as multiple threads could be updating the map
-    private synchronized ArrayList<Room> roomsToArray() {
+    private synchronized ArrayList<Room> roomsToArray(Packet packet) {
         ArrayList<Room> allRooms = new ArrayList<>(rooms.values());
 
         for (int port : backupRoomsPerPort.keySet()) {
-            synchronized (ServicesHandler.failedWorkers) {
-                if (ServicesHandler.failedWorkers.contains(port))
+                if (packet.failedWorkers.contains(port))
                     allRooms.addAll(backupRoomsPerPort.get(port));
-            }
         }
 
         return allRooms;
@@ -94,14 +92,8 @@ public class Worker extends Thread {
         ArrayList<Room> filteredRooms = new ArrayList<>();
         Packet response = new Packet(request);
         Room.RoomFilters filters = (Room.RoomFilters) request.data;
-        ArrayList<Room> roomsToFilter = new ArrayList<>(roomsToArray());
 
-        for (int port : backupRoomsPerPort.keySet()) {
-            if (request.failedWorkers.contains(port))
-                roomsToFilter.addAll(backupRoomsPerPort.get(port));
-        }
-
-        for (Room room : roomsToFilter)
+        for (Room room : roomsToArray(request))
             if (room.satisfiesConditions(filters)) filteredRooms.add(room);
 
         response.data = filteredRooms;
@@ -113,11 +105,10 @@ public class Worker extends Thread {
     // (empty if no bookings on this worker)
     private Packet showBookings(Packet request) {
         Packet response = new Packet(request);
-        String username = request.data.toString();
         ArrayList<String> bookings = new ArrayList<>();
 
-        for (Room room : roomsToArray()) {
-            String currBookings = room.getBookings(username);
+        for (Room room : roomsToArray(request)) {
+            String currBookings = room.getBookings();
             if (!currBookings.isEmpty()) bookings.add(room.roomName + ": " + currBookings);
         }
         response.data = bookings;
@@ -160,7 +151,7 @@ public class Worker extends Thread {
     private Packet showRooms(Packet request) {
         Packet res = new Packet(request);
 
-        res.data = roomsToArray();
+        res.data = roomsToArray(request);
 
         return res;
     }
