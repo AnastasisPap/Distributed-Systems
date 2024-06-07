@@ -105,11 +105,14 @@ public class Worker extends Thread {
     // (empty if no bookings on this worker)
     private Packet showBookings(Packet request) {
         Packet response = new Packet(request);
+        String username = request.data.toString();
         ArrayList<String> bookings = new ArrayList<>();
 
         for (Room room : roomsToArray(request)) {
-            String currBookings = room.getBookings();
-            if (!currBookings.isEmpty()) bookings.add(room.roomName + ": " + currBookings);
+            if (room.ownerUsername.equals(username)) {
+                String currBookings = room.getBookings();
+                if (!currBookings.isEmpty()) bookings.add(room.roomName + ": " + currBookings);
+            }
         }
         response.data = bookings;
 

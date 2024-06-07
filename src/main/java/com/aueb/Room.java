@@ -25,6 +25,7 @@ public class Room implements Serializable {
     public RangeSet<Long> availableDays = TreeRangeSet.create();
     public HashMap<String, RangeSet<Long>> bookings = new HashMap<>();
     public int portBackup;
+    public String ownerUsername;
 
     // Construct a Room object directly from JSON
     public Room(JSONObject json_obj) {
@@ -46,20 +47,6 @@ public class Room implements Serializable {
             addDateRange(Utils.stringToRange(date_obj.toString()));
     }
 
-    public Room(Room room) {
-        this.roomName = room.roomName;
-        this.area = room.area;
-        this.numOfPeople = room.numOfPeople;
-        this.price = room.price;
-        this.id = room.id;
-        this.ratingCount = room.ratingCount;
-        this.isBackup = room.isBackup;
-        this.rating = room.rating;
-        this.imageURL = room.imageURL;
-        this.availableDays = room.availableDays;
-        this.bookings = room.bookings;
-        this.portBackup = room.portBackup;
-    }
     // Returns true if it satisfies all the filters provided in the JSON Object
     // Input: JSON Object that contains the filters. Each key is an attribute of the Room (e.g. room_name, area, price,...)
     public boolean satisfiesConditions(RoomFilters filter) {
@@ -134,6 +121,7 @@ public class Room implements Serializable {
         res.put("room_image", this.imageURL);
         res.put("is_backup", this.isBackup);
         res.put("port_backup", this.portBackup);
+        res.put("owner_username", this.ownerUsername);
 
         JSONArray dates = new JSONArray();
         for (Range<Long> range : availableDays.asRanges())

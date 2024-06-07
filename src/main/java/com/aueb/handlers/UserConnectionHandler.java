@@ -158,6 +158,7 @@ public class UserConnectionHandler extends Thread {
         for (Object roomJson : roomsJSON) {
             for (int i = 0; i <= ServicesHandler.numOfBackups; i++) {
                 Room room = new Room((JSONObject) roomJson);
+                room.ownerUsername = userRequest.username;
                 int idx = (room.id + i) % n;
                 if (!packetsMap.containsKey(idx)) {
                     Packet packet = new Packet(request);
