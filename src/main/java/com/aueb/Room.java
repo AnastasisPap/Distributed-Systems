@@ -86,11 +86,14 @@ public class Room implements Serializable {
         }
     }
 
-    public String getBookings() {
+    public String getBookings(ArrayList<Range<Long>> dateRanges) {
         ArrayList<String> bookingsList = new ArrayList<>();
         for (String username : bookings.keySet()) {
             for (Range<Long> range : bookings.get(username).asRanges())
-                bookingsList.add(Utils.dateRangeToString(range));
+                for (Range<Long> overallDateRange : dateRanges) {
+                    if (overallDateRange.encloses(range))
+                        bookingsList.add(Utils.dateRangeToString(range));
+                }
         }
 
         String res = "";

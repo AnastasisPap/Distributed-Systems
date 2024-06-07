@@ -124,13 +124,15 @@ public class Worker extends Thread {
     // The output packet contains a string of all the bookings for the rooms of this worker
     // (empty if no bookings on this worker)
     private Packet showBookings(Packet request) {
+        Object[] data = (Object[]) request.data;
         Packet response = new Packet(request);
-        String username = request.data.toString();
+        String username = data[0].toString();
         ArrayList<String> bookings = new ArrayList<>();
+        ArrayList<Range<Long>> dateRanges = (ArrayList<Range<Long>>) data[1];
 
         for (Room room : roomsToArray(request)) {
             if (room.ownerUsername.equals(username)) {
-                String currBookings = room.getBookings();
+                String currBookings = room.getBookings(dateRanges);
                 if (!currBookings.isEmpty()) bookings.add(room.roomName + ": " + currBookings);
             }
         }

@@ -117,8 +117,13 @@ public class UserConnectionHandler extends Thread {
     // Input: request from which we get the username
     // Output: hashmap that contains all workers and the request contains the username
     private HashMap<Integer, Packet> handleShowBookings(UserRequest userRequest, Packet packet) {
+        JSONArray dateRangesJSON = (JSONArray) userRequest.data.get("date_ranges");
+        ArrayList<Range<Long>> dateRanges = new ArrayList<>();
+
+        for (int i = 0; i < dateRangesJSON.size(); i++)
+            dateRanges.add(Utils.stringToRange(dateRangesJSON.get(i).toString()));
         Packet request = new Packet(packet);
-        request.data = userRequest.username;
+        request.data = new Object[]{userRequest.username, dateRanges};
         request.returnOutput = true;
 
         return sendToAll(request);
