@@ -94,7 +94,7 @@ public class Reducer extends Thread {
         if (!packets.isEmpty()) {
             String function = packets.getFirst().function;
             switch (function) {
-                case "add_rooms", "book_room":
+                case "add_rooms", "book_room", "rate_room":
                     res.data = packets.getFirst().data;
                     break;
                 case "show_rooms", "filter":

@@ -32,9 +32,16 @@ public class Room implements Serializable {
         this.roomName = json_obj.get("room_name").toString();
         this.numOfPeople = Integer.parseInt(json_obj.get("num_of_people").toString());
         this.area = json_obj.get("area").toString();
-        this.rating = Float.parseFloat(json_obj.get("review").toString());
         this.price = Float.parseFloat(json_obj.get("price").toString());
-        this.ratingCount = Integer.parseInt(json_obj.get("num_of_reviews").toString());
+        if (json_obj.containsKey("num_of_reviews"))
+            this.ratingCount = Integer.parseInt(json_obj.get("num_of_reviews").toString());
+        else
+            this.ratingCount = 0;
+        if (json_obj.containsKey("review"))
+            this.rating = Float.parseFloat(json_obj.get("review").toString());
+        else
+            this.rating = 0;
+
         this.id = Integer.parseInt(json_obj.get("id").toString());
         this.imageURL = json_obj.get("room_image").toString();
         if (json_obj.containsKey("is_backup"))
@@ -92,6 +99,15 @@ public class Room implements Serializable {
             if (i < bookingsList.size() - 1) res += ", ";
         }
         return res;
+    }
+
+    public float addRating(float rating) {
+        float currTotal = this.rating * ratingCount;
+        ratingCount++;
+        currTotal += rating;
+        this.rating = currTotal / ratingCount;
+
+        return this.rating;
     }
 
     // Input: JSON array with the first time = start date and second item = end date

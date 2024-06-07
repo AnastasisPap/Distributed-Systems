@@ -55,6 +55,7 @@ public class UserConnectionHandler extends Thread {
                 case "show_rooms" -> sendToAll(request);
                 case "show_bookings" -> handleShowBookings(userRequest, request);
                 case "filter" -> handleRoomsFilter(userRequest, request);
+                case "rate_room" -> handleRateRoom(userRequest, request);
                 default -> throw new RuntimeException("Can't find function: " + request.function);
             };
 
@@ -123,15 +124,7 @@ public class UserConnectionHandler extends Thread {
         return sendToAll(request);
     }
 
-    // Input: request from which we get the date range, username, and room id
-    // Output: hash map that will be sent to all workers and contains the room id, date range, and username
-    // We send it to all workers since we don't know which one holds the room with that ID.
-    // We could only send it to one if the hashing was done based on room ID (or the booking was done based on room name)
-    private HashMap<Integer, Packet> handleBookRoom(UserRequest userRequest, Packet request) {
-        Range<Long> dateRange = Utils.stringToRange(userRequest.data.get("date_range").toString());
-        int roomId = Integer.parseInt(userRequest.data.get("room_id").toString());
-        Object[] data = new Object[]{roomId, dateRange, userRequest.username};
-
+    private HashMap<Integer, Packet> sendToMainAndBackup(Packet request, Object data, int roomId) {
         HashMap<Integer, Packet> packetsMap = new HashMap<>();
 
         for (int i = 0; i <= ServicesHandler.numOfBackups; i++) {
@@ -142,8 +135,27 @@ public class UserConnectionHandler extends Thread {
             packetsMap.put(idx, workerRequest);
         }
 
-
         return packetsMap;
+    }
+
+    private HashMap<Integer, Packet> handleRateRoom(UserRequest userRequest, Packet request) {
+        int roomId = Integer.parseInt(userRequest.data.get("room_id").toString());
+        float rating = Float.parseFloat(userRequest.data.get("rating").toString());
+        Object[] data = new Object[]{roomId, rating};
+
+        return sendToMainAndBackup(request, data, roomId);
+    }
+
+    // Input: request from which we get the date range, username, and room id
+    // Output: hash map that will be sent to all workers and contains the room id, date range, and username
+    // We send it to all workers since we don't know which one holds the room with that ID.
+    // We could only send it to one if the hashing was done based on room ID (or the booking was done based on room name)
+    private HashMap<Integer, Packet> handleBookRoom(UserRequest userRequest, Packet request) {
+        Range<Long> dateRange = Utils.stringToRange(userRequest.data.get("date_range").toString());
+        int roomId = Integer.parseInt(userRequest.data.get("room_id").toString());
+        Object[] data = new Object[]{roomId, dateRange, userRequest.username};
+
+        return sendToMainAndBackup(request, data, roomId);
     }
 
     // Input: request from which we get the room information as JSON

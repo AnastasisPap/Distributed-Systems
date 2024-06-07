@@ -17,7 +17,7 @@ public class Worker extends Thread {
     // Value: Room object
     HashMap<Integer, Room> rooms = new HashMap<>();
     HashMap<Integer, Room> backupRoomsPerID = new HashMap<>();
-    HashMap<Integer, ArrayList<Room>> backupRoomsPerPort = new HashMap<>();
+    HashMap<Integer, ArrayList<Integer>> backupRoomIDsPerPort = new HashMap<>();
     private final int port;
 
     public static void main(String[] args) {
@@ -65,6 +65,7 @@ public class Worker extends Thread {
             case "show_rooms" -> showRooms(request);
             case "show_bookings" -> showBookings(request);
             case "filter" -> filterRooms(request);
+            case "rate_room" -> rateRoom(request);
             default -> throw new RuntimeException("Invalid function");
         };
 
@@ -74,13 +75,32 @@ public class Worker extends Thread {
         }
     }
 
+    private Packet rateRoom(Packet request) {
+        System.out.println("OK");
+        Packet res = new Packet(request);
+        Object[] data = (Object[]) request.data;
+        int roomId = (int) data[0];
+        float rating = (float) data[1];
+
+        float newRating = 0;
+        if (rooms.containsKey(roomId))
+            newRating = rooms.get(roomId).addRating(rating);
+        else if (backupRoomsPerID.containsKey(roomId))
+            newRating = backupRoomsPerID.get(roomId).addRating(rating);
+
+        res.data = "Successfully added rating. New room rating: " + newRating;
+        return res;
+    }
+
     // We use synchronized to get the latest value as multiple threads could be updating the map
     private synchronized ArrayList<Room> roomsToArray(Packet packet) {
         ArrayList<Room> allRooms = new ArrayList<>(rooms.values());
 
-        for (int port : backupRoomsPerPort.keySet()) {
-                if (packet.failedWorkers.contains(port))
-                    allRooms.addAll(backupRoomsPerPort.get(port));
+        for (int port : backupRoomIDsPerPort.keySet()) {
+                if (packet.failedWorkers.contains(port)) {
+                    for (int id : backupRoomIDsPerPort.get(port))
+                        allRooms.add(backupRoomsPerID.get(id));
+                }
         }
 
         return allRooms;
@@ -134,8 +154,9 @@ public class Worker extends Thread {
                 boolean bookedRoom;
                 if (rooms.containsKey(room_id))
                     bookedRoom = rooms.get(room_id).book(data[2].toString(), (Range<Long>) data[1]);
-                else
+                else {
                     bookedRoom = backupRoomsPerID.get(room_id).book(data[2].toString(), (Range<Long>) data[1]);
+                }
                 if (bookedRoom) {
                     res.data = "Successfully booked room.";
                     System.out.println("Successfully booked room.");
@@ -170,10 +191,10 @@ public class Worker extends Thread {
                 synchronized (backupRoomsPerID) {
                     backupRoomsPerID.put(room.id, room);
                 }
-                synchronized (backupRoomsPerPort) {
+                synchronized (backupRoomIDsPerPort) {
                     int port = room.portBackup;
-                    if (!backupRoomsPerPort.containsKey(port)) backupRoomsPerPort.put(port, new ArrayList<>());
-                    backupRoomsPerPort.get(port).add(room);
+                    if (!backupRoomIDsPerPort.containsKey(port)) backupRoomIDsPerPort.put(port, new ArrayList<>());
+                    backupRoomIDsPerPort.get(port).add(room.id);
                 }
             } else {
                 synchronized (rooms) {
